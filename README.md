@@ -226,7 +226,7 @@ flowchart LR
 
 ---
 
-## � Segurança e Privacidade
+## 🔒 Segurança e Privacidade
 
 ### Seus dados estão seguros
 
@@ -263,9 +263,16 @@ flowchart LR
 
 ---
 
-## �📄 Licença
+## 📄 Direitos Autorais e Licença
 
-Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+**© 2026 Floatech - Wesley Santos. Todos os direitos reservados.**
+
+Este projeto é parte de um portfólio profissional e propriedade intelectual de seu autor.
+O código-fonte é disponibilizado publicamente apenas para fins de **demonstração e avaliação técnica**.
+
+❌ É proibido o uso comercial, cópia, modificação ou redistribuição sem autorização prévia por escrito.
+
+Para consultas sobre licenciamento ou contratação, entre em contato via LinkedIn.
 
 ---
 

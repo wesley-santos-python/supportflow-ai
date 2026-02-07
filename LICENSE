@@ -1,21 +1,18 @@
-MIT License
+COPYRIGHT (c) 2026 Floatech - Wesley Santos. Todos os direitos reservados.
 
-Copyright (c) 2026 Floatech
+AVISO DE PROPRIEDADE E USO
+--------------------------
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Este código-fonte é propriedade intelectual exclusiva de Wesley Santos (Floatech).
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. PERMISSÃO DE VISUALIZAÇÃO:
+   É permitido visualizar este código para fins educacionais ou de avaliação de portfólio.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+2. PROIBIÇÕES:
+   É ESTRITAMENTE PROIBIDO:
+   - Copiar este código, no todo ou em parte, para uso em outros projetos.
+   - Usar este software para fins comerciais sem autorização expressa.
+   - Modificar, distribuir ou sublicenciar este software.
+   - Replicar a lógica de negócio proprietária contida neste repositório.
+
+Para solicitações de uso comercial ou licenciamento, entre em contato com o autor.
