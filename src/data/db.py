@@ -6,7 +6,7 @@ Utiliza SQLAlchemy como ORM com SQLite como backend.
 from typing import List, Optional
 
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 from src.data.models import Base, Ticket
 from src.utils.logger import get_logger
@@ -24,10 +24,6 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
     logger.debug("Banco de dados inicializado")
 
-
-def get_session() -> Session:
-    """Retorna uma nova sessão do banco de dados."""
-    return SessionLocal()
 
 
 def save_ticket(ticket_data: dict) -> bool:

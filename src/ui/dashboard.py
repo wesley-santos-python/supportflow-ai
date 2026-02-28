@@ -12,7 +12,7 @@ from typing import Optional
 from src.data.db import SessionLocal
 from src.data.models import Ticket
 from src.core.automation import SupportController
-from src.ui.components import filter_chips, urgency_badge
+from src.ui.components import filter_chips
 from src.utils.logger import get_logger
 from sqlalchemy import case
 

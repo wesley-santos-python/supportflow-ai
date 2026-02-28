@@ -37,6 +37,3 @@ def get_logger(name: str, level: Optional[int] = None) -> logging.Logger:
     logger.setLevel(level or logging.INFO)
     return logger
 
-
-# Logger global para uso rápido
-default_logger = get_logger('supportflow')

@@ -10,7 +10,6 @@ from .db import (
     get_ticket_by_id, 
     update_ticket_status,
     delete_ticket,
-    get_session,
     SessionLocal
 )
 from .models import Ticket, Base
@@ -22,7 +21,6 @@ __all__ = [
     'get_ticket_by_id', 
     'update_ticket_status',
     'delete_ticket',
-    'get_session',
     'SessionLocal',
     'Ticket', 
     'Base'

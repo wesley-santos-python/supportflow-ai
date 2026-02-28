@@ -42,7 +42,7 @@
 
 ```bash
 # Clone o repositório
-git clone https://github.com/seu-usuario/supportflow-ai.git
+git clone https://github.com/wesley-santos-python/supportflow-ai.git
 cd supportflow-ai
 
 # Crie o ambiente virtual
