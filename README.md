@@ -265,7 +265,7 @@ flowchart LR
 
 ## 📄 Direitos Autorais e Licença
 
-**© 2026 Floatech - Wesley Santos. Todos os direitos reservados.**
+**© 2026 Floatech - Weslei Santos. Todos os direitos reservados.**
 
 Este projeto é parte de um portfólio profissional e propriedade intelectual de seu autor.
 O código-fonte é disponibilizado publicamente apenas para fins de **demonstração e avaliação técnica**.
@@ -278,6 +278,6 @@ Para consultas sobre licenciamento ou contratação, entre em contato via Linked
 
 <div align="center">
 
-**Desenvolvido com ❤️ por Wesley Santos**
+**Desenvolvido com ❤️ por Weslei Santos**
 
 </div>
