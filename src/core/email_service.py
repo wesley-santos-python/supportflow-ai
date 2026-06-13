@@ -3,98 +3,96 @@ Serviço de integração com e-mail via IMAP.
 
 Responsável por buscar e-mails não lidos e marcar como lidos após processamento.
 """
-import os
-from typing import List, Dict, Any
+from typing import Any, Dict, Iterable, List
 
-from imap_tools import MailBox, AND
-from dotenv import load_dotenv
+from imap_tools import AND, MailBox
 
-from src.utils.logger import get_logger
+from src.config import settings
 from src.exceptions import EmailConnectionError
+from src.utils.logger import get_logger
 
-load_dotenv()
 logger = get_logger(__name__)
 
 
 class EmailService:
     """
     Serviço de acesso a e-mails via protocolo IMAP.
-    
+
     Suporta Gmail e Outlook. Configuração via variáveis de ambiente.
-    
-    Attributes:
-        user: Endereço de e-mail do usuário.
-        password: Senha de app para autenticação.
-        imap_server: Servidor IMAP (default: imap.gmail.com).
     """
-    
-    IMAP_SERVERS = {
-        "gmail": "imap.gmail.com",
-        "outlook": "outlook.office365.com",
-    }
-    
+
     def __init__(self) -> None:
-        """Inicializa o serviço com credenciais do ambiente."""
-        self.user = os.getenv("EMAIL_USER")
-        self.password = os.getenv("EMAIL_PASS")
-        self.imap_server = os.getenv("IMAP_SERVER", self.IMAP_SERVERS["gmail"])
-        
-        if not self.user or not self.password:
+        """Inicializa o serviço com credenciais da configuração."""
+        self.user = settings.email_user
+        self.password = settings.email_pass
+        self.imap_server = settings.imap_server
+
+        if not settings.email_configured:
             logger.warning("Credenciais de e-mail não configuradas")
-        
+
         logger.debug(f"EmailService inicializado para {self.user}")
 
-    def fetch_unread_emails(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def fetch_unread_emails(self, limit: int | None = None) -> List[Dict[str, Any]]:
         """
         Busca e-mails não lidos da caixa de entrada.
-        
+
         Args:
-            limit: Número máximo de e-mails a buscar.
-        
+            limit: Número máximo de e-mails (default: FETCH_LIMIT do ambiente).
+
         Returns:
             Lista de dicionários com id, sender, subject, body e date.
-        
+
         Raises:
             EmailConnectionError: Se falhar a conexão com o servidor.
         """
+        limit = limit or settings.fetch_limit
         emails_payload: List[Dict[str, Any]] = []
-        
+
         try:
             with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
                 for msg in mailbox.fetch(AND(seen=False), limit=limit, reverse=True):
-                    emails_payload.append({
-                        "id": msg.uid,
-                        "sender": msg.from_,
-                        "subject": msg.subject,
-                        "body": msg.text,
-                        "date": msg.date
-                    })
-            
+                    emails_payload.append(
+                        {
+                            "id": msg.uid,
+                            "sender": msg.from_,
+                            "subject": msg.subject,
+                            "body": msg.text,
+                            "date": msg.date,
+                        }
+                    )
+
             logger.info(f"Buscados {len(emails_payload)} e-mails não lidos")
             return emails_payload
-            
+
         except Exception as e:
             logger.error(f"Erro ao acessar e-mail: {e}")
             raise EmailConnectionError(
                 message="Falha ao conectar com servidor de e-mail",
-                details=str(e)
+                details=str(e),
             )
 
     def mark_as_read(self, uid: str) -> bool:
+        """Marca um único e-mail como lido."""
+        return self.mark_as_read_bulk([uid])
+
+    def mark_as_read_bulk(self, uids: Iterable[str]) -> bool:
         """
-        Marca um e-mail como lido.
-        
+        Marca vários e-mails como lidos em uma única conexão IMAP.
+
         Args:
-            uid: ID único do e-mail (IMAP UID).
-        
+            uids: IDs únicos (IMAP UID) dos e-mails.
+
         Returns:
-            True se marcado com sucesso, False caso contrário.
+            True se a operação foi bem-sucedida, False caso contrário.
         """
+        uid_list = [u for u in uids if u]
+        if not uid_list:
+            return True
         try:
             with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
-                mailbox.flag(uid, '\\Seen', True)
-            logger.debug(f"E-mail {uid} marcado como lido")
+                mailbox.flag(uid_list, "\\Seen", True)
+            logger.debug(f"{len(uid_list)} e-mail(s) marcado(s) como lido(s)")
             return True
         except Exception as e:
-            logger.error(f"Erro ao marcar e-mail como lido: {e}")
+            logger.error(f"Erro ao marcar e-mails como lidos: {e}")
             return False

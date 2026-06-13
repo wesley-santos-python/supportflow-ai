@@ -49,12 +49,13 @@ class TestAIService:
     def test_analyze_ticket_fallback_on_error(self):
         """Testa fallback quando a IA falha."""
         with patch.dict('os.environ', {'AI_API_KEY': 'test_key'}):
-            with patch('src.core.ai_engine.genai') as mock_genai:
+            with patch('src.core.ai_engine.genai') as mock_genai, \
+                 patch('src.core.ai_engine.time.sleep'):  # evita esperar o backoff
                 mock_client = MagicMock()
                 mock_genai.Client.return_value = mock_client
                 # Simula erro da API
                 mock_client.models.generate_content.side_effect = Exception("API Error")
-                
+
                 from src.core.ai_engine import AIService
                 service = AIService()
                 result = service.analyze_ticket("Qualquer texto")

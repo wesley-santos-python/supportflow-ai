@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SupportFlow AI — Gestão Inteligente de Tickets</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { surface: '#1e1f22', base: '#111214', edge: '#2b2d31' } } }
+        };
+    </script>
+    <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="bg-base text-gray-200 min-h-screen antialiased">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Modal de detalhes (preenchido via HTMX) -->
+    <div id="modal"></div>
+
+    <!-- Container de toasts -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

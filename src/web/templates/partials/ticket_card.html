@@ -1,0 +1,38 @@
+{% set urg_color = {'Alta':'bg-red-700','Média':'bg-orange-600','Baixa':'bg-emerald-700'}.get(ticket.urgencia, 'bg-gray-600') %}
+{% set st_color = {'Pendente':'bg-yellow-600/80','Em Andamento':'bg-blue-600/80','Resolvido':'bg-emerald-700/80'}.get(ticket.status, 'bg-gray-600') %}
+<article id="ticket-{{ ticket.id }}"
+         class="bg-surface border border-edge rounded-xl p-4 flex flex-col gap-3 hover:border-blue-700/50 transition">
+    <div class="cursor-pointer flex flex-col gap-2"
+         hx-get="/tickets/{{ ticket.id }}/detail" hx-target="#modal" hx-swap="innerHTML">
+        <div class="flex items-start justify-between gap-2">
+            <h3 class="font-semibold text-white text-sm leading-snug">📧 {{ ticket.subject or "(sem assunto)" }}</h3>
+            <span class="shrink-0 text-[10px] font-bold uppercase px-2 py-0.5 rounded-full text-white {{ urg_color }}">
+                {{ ticket.urgencia or "Baixa" }}
+            </span>
+        </div>
+        <p class="text-xs text-gray-500 italic">De: {{ ticket.sender }}</p>
+        <p class="text-sm text-gray-300 line-clamp-2">{{ ticket.resumo or "Análise pendente..." }}</p>
+        <div class="flex items-center justify-between text-xs">
+            <span class="text-amber-300">📂 {{ ticket.categoria or "Outros" }}</span>
+            <span class="text-gray-600">{{ ticket.created_at.strftime('%d/%m %H:%M') if ticket.created_at else '' }}</span>
+        </div>
+    </div>
+
+    <div class="flex items-center justify-between border-t border-edge pt-3">
+        <div class="flex items-center gap-2">
+            <span class="text-[10px] px-2 py-0.5 rounded-full text-white {{ st_color }}">{{ ticket.status }}</span>
+            <select name="status"
+                    hx-post="/tickets/{{ ticket.id }}/status"
+                    hx-target="#ticket-{{ ticket.id }}" hx-swap="outerHTML"
+                    class="bg-base border border-edge rounded-md px-2 py-1 text-xs text-gray-300 focus:outline-none">
+                {% for s in status_options %}
+                <option value="{{ s }}" {% if s == ticket.status %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button hx-delete="/tickets/{{ ticket.id }}"
+                hx-target="#ticket-{{ ticket.id }}" hx-swap="outerHTML"
+                hx-confirm="Remover este ticket?"
+                class="text-gray-500 hover:text-red-400 text-sm transition" title="Remover">🗑</button>
+    </div>
+</article>

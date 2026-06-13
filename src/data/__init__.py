@@ -4,24 +4,32 @@ Módulo de dados do SupportFlow AI.
 Contém modelos ORM e funções de acesso ao banco de dados.
 """
 from .db import (
-    init_db, 
-    save_ticket, 
-    get_all_tickets, 
-    get_ticket_by_id, 
-    update_ticket_status,
+    SessionLocal,
+    create_ticket,
     delete_ticket,
-    SessionLocal
+    get_db,
+    get_stats,
+    get_ticket,
+    init_db,
+    list_tickets,
+    session_scope,
+    set_status,
+    ticket_exists,
 )
-from .models import Ticket, Base
+from .models import Base, Ticket
 
 __all__ = [
-    'init_db', 
-    'save_ticket', 
-    'get_all_tickets', 
-    'get_ticket_by_id', 
-    'update_ticket_status',
-    'delete_ticket',
-    'SessionLocal',
-    'Ticket', 
-    'Base'
+    "SessionLocal",
+    "create_ticket",
+    "delete_ticket",
+    "get_db",
+    "get_stats",
+    "get_ticket",
+    "init_db",
+    "list_tickets",
+    "session_scope",
+    "set_status",
+    "ticket_exists",
+    "Base",
+    "Ticket",
 ]

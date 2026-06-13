@@ -1,0 +1,11 @@
+{% if tickets %}
+    {% for ticket in tickets %}
+        {% include "partials/ticket_card.html" %}
+    {% endfor %}
+{% else %}
+    <div class="md:col-span-2 flex flex-col items-center justify-center text-center py-20 text-gray-500">
+        <div class="text-5xl mb-3">📭</div>
+        <p class="text-lg font-medium text-gray-400">Nenhum ticket encontrado</p>
+        <p class="text-sm">Clique em <span class="text-blue-400">Sincronizar</span> para buscar novos e-mails ou ajuste os filtros.</p>
+    </div>
+{% endif %}

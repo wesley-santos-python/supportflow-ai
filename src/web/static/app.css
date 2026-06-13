@@ -1,0 +1,14 @@
+/* Indicador de carregamento do HTMX (ex.: botão Sincronizar). */
+.htmx-indicator {
+    display: none;
+}
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+    display: inline-block;
+}
+
+/* Scrollbar discreta no tema escuro. */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: #111214; }
+::-webkit-scrollbar-thumb { background: #2b2d31; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3d42; }

@@ -18,6 +18,12 @@ __pycache__/
 *.db
 *.sqlite3
 
+# Exportações de tickets
+tickets_export*.json
+
+# Pytest
+.pytest_cache/
+
 # IDEs
 .idea/
 .vscode/

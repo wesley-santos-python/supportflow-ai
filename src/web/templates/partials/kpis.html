@@ -1,0 +1,16 @@
+<section id="kpis" hx-get="/kpis" hx-trigger="refreshKpis from:body" hx-swap="outerHTML"
+         class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+    {% set cards = [
+        ('Total', stats.total, 'text-white', 'border-edge'),
+        ('Urgência Alta', stats.alta, 'text-red-400', 'border-red-700/40'),
+        ('Pendentes', stats.pendente, 'text-yellow-400', 'border-yellow-700/40'),
+        ('Em Andamento', stats.em_andamento, 'text-blue-400', 'border-blue-700/40'),
+        ('Resolvidos', stats.resolvido, 'text-emerald-400', 'border-emerald-700/40'),
+    ] %}
+    {% for label, value, color, border in cards %}
+    <div class="bg-surface border {{ border }} rounded-xl px-4 py-3">
+        <div class="text-2xl font-bold {{ color }}">{{ value }}</div>
+        <div class="text-xs text-gray-500 mt-1">{{ label }}</div>
+    </div>
+    {% endfor %}
+</section>

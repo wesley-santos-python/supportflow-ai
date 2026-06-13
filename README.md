@@ -3,9 +3,10 @@
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Flet](https://img.shields.io/badge/Flet-UI%20Framework-02569B?style=for-the-badge)
+![FastAPI](https://img.shields.io/badge/FastAPI-Web%20API-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![HTMX](https://img.shields.io/badge/HTMX-+%20Tailwind-3366CC?style=for-the-badge)
 ![Gemini](https://img.shields.io/badge/Google%20Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
 
 **Sistema inteligente de gestão de tickets de suporte com IA generativa**
 
@@ -21,12 +22,16 @@
 
 ## 📋 Funcionalidades
 
-- 📧 **Integração IMAP** - Busca automática de e-mails não lidos (Gmail/Outlook)
+- 📧 **Integração IMAP** - Busca automática de e-mails não lidos (Gmail/Outlook), com dedupe antes da IA
 - 🤖 **Análise com IA** - Classifica urgência, categoria e gera respostas usando Google Gemini
-- 🏷️ **Classificação Automática** - Urgência (Alta/Média/Baixa) e categoria (Técnico/Financeiro/Logística)
-- 💾 **Persistência SQLite** - Armazenamento local estruturado com SQLAlchemy
-- 🖥️ **Dashboard Moderno** - Interface dark mode com Flet framework
-- 📋 **Sugestão de Respostas** - IA gera respostas prontas para copiar/enviar
+- 🏷️ **Classificação Automática** - Urgência (Alta/Média/Baixa) e categoria (Técnico/Financeiro/Logística/Outros)
+- 📊 **Painel de KPIs** - Métricas em tempo real (total, urgência, status) no topo do dashboard
+- 🔎 **Busca e Filtros** - Por assunto/remetente, categoria, urgência e status
+- 🔄 **Gestão de Status** - Marque tickets como Pendente / Em Andamento / Resolvido
+- 💾 **Persistência configurável** - PostgreSQL por padrão (SQLite/MySQL via `.env`), com SQLAlchemy
+- 🖥️ **Dashboard Web Moderno** - Interface dark mode com FastAPI + HTMX + Tailwind (sem build de Node)
+- 🔌 **API JSON** - Endpoints reutilizáveis (`/api/tickets`, `/api/stats`) e exportação
+- 📋 **Sugestão de Respostas** - IA gera respostas editáveis prontas para copiar
 
 ---
 
@@ -37,6 +42,7 @@
 - Python 3.10 ou superior
 - Conta Google Cloud com API Gemini habilitada
 - Conta de e-mail com acesso IMAP habilitado
+- Docker (opcional, para subir o PostgreSQL rapidamente)
 
 ### Passos
 
@@ -53,6 +59,9 @@ source .venv/bin/activate  # Linux/Mac
 
 # Instale as dependências
 pip install -r requirements.txt
+
+# Suba o banco PostgreSQL (via Docker)
+docker compose up -d
 ```
 
 ---
@@ -61,15 +70,19 @@ pip install -r requirements.txt
 
 ### 1. Variáveis de Ambiente
 
-Crie um arquivo `.env` na raiz do projeto:
+Copie `.env.example` para `.env` e preencha:
 
 ```env
+# Banco de dados (PostgreSQL por padrão; troque a URL para SQLite/MySQL sem mexer no código)
+DATABASE_URL=postgresql+psycopg://supportflow:supportflow@localhost:5432/supportflow
+
 # Credenciais de E-mail (Gmail)
 EMAIL_USER=seu-email@gmail.com
 EMAIL_PASS=sua-senha-de-app
 
 # API Google Gemini
 AI_API_KEY=sua-chave-api-gemini
+AI_MODEL=gemini-2.5-flash-lite
 ```
 
 ### 2. Configurar Gmail
@@ -96,7 +109,7 @@ Para usar com Gmail, você precisa:
 python main.py
 ```
 
-O dashboard será aberto automaticamente no navegador.
+Acesse a interface web em **http://127.0.0.1:8000**.
 
 ### Executar Testes
 
@@ -104,40 +117,33 @@ O dashboard será aberto automaticamente no navegador.
 pytest tests/ -v
 ```
 
-### Exportar Dados
+### API JSON
 
-Clique no botão **Exportar JSON** no dashboard para baixar todos os tickets em formato JSON.
+| Endpoint | Descrição |
+|----------|-----------|
+| `GET /api/tickets` | Lista tickets (filtros: `search`, `categoria`, `urgencia`, `status`, `limit`, `offset`) |
+| `GET /api/stats` | Métricas agregadas (KPIs) |
+| `GET /export.json` | Download de todos os tickets em JSON |
+| `GET /health` | Health check |
 
 ---
 
 ## 🗄️ Trocar Banco de Dados
 
-Por padrão, o SupportFlow AI usa **SQLite** (arquivo local). Para usar **MySQL** ou **PostgreSQL**:
+O backend é definido pela variável `DATABASE_URL` no `.env` — **sem editar código**:
 
-### 1. Instale o driver
+```env
+# PostgreSQL (padrão)
+DATABASE_URL=postgresql+psycopg://usuario:senha@servidor:5432/nome_banco
 
-```bash
-# MySQL
-pip install pymysql
+# SQLite (arquivo local)
+DATABASE_URL=sqlite:///./support_flow.db
 
-# PostgreSQL
-pip install psycopg2-binary
+# MySQL (requer: pip install pymysql)
+DATABASE_URL=mysql+pymysql://usuario:senha@servidor:3306/nome_banco
 ```
 
-### 2. Altere `src/data/db.py`
-
-```python
-# De (SQLite local):
-DATABASE_URL = "sqlite:///./support_flow.db"
-
-# Para MySQL:
-DATABASE_URL = "mysql+pymysql://usuario:senha@servidor:3306/nome_banco"
-
-# Para PostgreSQL:
-DATABASE_URL = "postgresql://usuario:senha@servidor:5432/nome_banco"
-```
-
-O SQLAlchemy cuida de toda migração automaticamente!
+O SQLAlchemy cria as tabelas automaticamente na primeira execução.
 
 ---
 
@@ -145,25 +151,30 @@ O SQLAlchemy cuida de toda migração automaticamente!
 
 ```
 supportflow-ai/
-├── main.py                    # Ponto de entrada
+├── main.py                    # Ponto de entrada (servidor uvicorn)
+├── docker-compose.yml         # PostgreSQL para desenvolvimento
 ├── src/
+│   ├── config.py              # ⚙️ Configuração via .env (pydantic-settings)
 │   ├── core/                  # 🧠 Lógica de negócio
-│   │   ├── ai_engine.py       # Integração Google Gemini
-│   │   ├── automation.py      # Orquestrador de fluxo
-│   │   └── email_service.py   # Cliente IMAP
+│   │   ├── ai_engine.py       # Integração Google Gemini (retry + truncamento)
+│   │   ├── automation.py      # Orquestrador (dedupe antes da IA)
+│   │   └── email_service.py   # Cliente IMAP (marca lidos em lote)
 │   ├── data/                  # 💾 Camada de dados
-│   │   ├── db.py              # Funções CRUD SQLAlchemy
+│   │   ├── db.py              # Sessões + repositório SQLAlchemy
 │   │   └── models.py          # Modelo ORM Ticket
-│   ├── ui/                    # 🎨 Interface do usuário
-│   │   ├── dashboard.py       # Dashboard principal
-│   │   └── components.py      # Componentes reutilizáveis
+│   ├── web/                   # 🎨 Interface web
+│   │   ├── app.py            # App FastAPI (rotas HTMX + API JSON)
+│   │   ├── templates/        # Páginas e fragmentos Jinja2
+│   │   └── static/           # CSS + JS (toasts, clipboard)
 │   ├── utils/                 # 🔧 Utilitários
-│   │   └── logger.py          # Sistema de logging
+│   │   └── logger.py          # Logging configurável (LOG_LEVEL)
 │   └── exceptions.py          # Exceções customizadas
 └── tests/                     # 🧪 Testes automatizados
     ├── test_ai_engine.py
+    ├── test_automation.py
     ├── test_db.py
-    └── test_email_service.py
+    ├── test_email_service.py
+    └── test_web.py
 ```
 
 ### Fluxo de Dados
@@ -176,8 +187,9 @@ flowchart LR
     D --> E[Gemini API]
     E --> D
     D --> C
-    C --> F[💾 Database]
-    F --> G[🖥️ Dashboard]
+    C --> F[💾 PostgreSQL]
+    F --> G[⚡ FastAPI]
+    G --> H[🖥️ Dashboard HTMX]
 ```
 
 ---
@@ -186,12 +198,14 @@ flowchart LR
 
 | Tecnologia | Uso |
 |------------|-----|
-| **Flet** | Framework UI Python (Flutter-based) |
+| **FastAPI** | Framework web / API (ASGI) |
+| **HTMX + Tailwind** | Frontend interativo server-rendered (sem build de Node) |
+| **Jinja2** | Templates HTML |
 | **SQLAlchemy** | ORM para banco de dados |
-| **SQLite** | Banco de dados local |
+| **PostgreSQL** | Banco de dados (configurável via `.env`) |
+| **pydantic-settings** | Configuração por variáveis de ambiente |
 | **Google Gemini** | IA generativa para análise |
 | **imap-tools** | Cliente IMAP moderno |
-| **python-dotenv** | Gerenciamento de variáveis de ambiente |
 | **pytest** | Framework de testes |
 
 ---
@@ -213,6 +227,7 @@ flowchart LR
 | `resposta_sugerida` | Text | Resposta gerada pela IA |
 | `status` | String | Pendente / Em Andamento / Resolvido |
 | `created_at` | DateTime | Data de criação |
+| `updated_at` | DateTime | Data da última atualização |
 
 ---
 
@@ -233,7 +248,7 @@ flowchart LR
 | Aspecto | Garantia |
 |---------|----------|
 | **Armazenamento** | 100% local no seu computador |
-| **Banco de dados** | SQLite local (não vai para nenhum servidor) |
+| **Banco de dados** | Roda na sua infraestrutura (PostgreSQL local/Docker ou SQLite); não vai para servidores de terceiros |
 | **Credenciais** | Armazenadas apenas no seu arquivo `.env` |
 | **Código** | 100% open-source e auditável |
 

@@ -85,6 +85,30 @@ class TestEmailService:
             from src.core.email_service import EmailService
             service = EmailService()
             result = service.mark_as_read("123")
-            
+
             assert result is True
-            mock_mailbox_instance.flag.assert_called_once_with("123", '\\Seen', True)
+            mock_mailbox_instance.flag.assert_called_once_with(["123"], '\\Seen', True)
+
+    def test_mark_as_read_bulk(self, mock_env):
+        """Testa marcação de vários e-mails em uma única conexão."""
+        with patch('src.core.email_service.MailBox') as mock_mailbox:
+            mock_mailbox_instance = MagicMock()
+            mock_mailbox_instance.__enter__ = MagicMock(return_value=mock_mailbox_instance)
+            mock_mailbox_instance.__exit__ = MagicMock(return_value=False)
+            mock_mailbox.return_value.login.return_value = mock_mailbox_instance
+
+            from src.core.email_service import EmailService
+            service = EmailService()
+            result = service.mark_as_read_bulk(["1", "2", "3"])
+
+            assert result is True
+            mock_mailbox_instance.flag.assert_called_once_with(["1", "2", "3"], '\\Seen', True)
+            mock_mailbox.assert_called_once()  # uma única conexão
+
+    def test_mark_as_read_bulk_empty_noop(self, mock_env):
+        """Lista vazia não abre conexão."""
+        with patch('src.core.email_service.MailBox') as mock_mailbox:
+            from src.core.email_service import EmailService
+            service = EmailService()
+            assert service.mark_as_read_bulk([]) is True
+            mock_mailbox.assert_not_called()
