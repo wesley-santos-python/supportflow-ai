@@ -111,6 +111,19 @@ python main.py
 
 Acesse a interface web em **http://127.0.0.1:8000**.
 
+### 👀 Visualização rápida (modo demo — sem Docker)
+
+Para ver a interface funcionando **sem PostgreSQL e sem configurar e-mail/IA**,
+use SQLite e popule dados de exemplo (macOS/Linux):
+
+```bash
+export DATABASE_URL="sqlite:///./demo.db"   # banco local em arquivo
+python scripts/seed_demo.py                 # insere 5 tickets de exemplo
+python main.py                              # http://127.0.0.1:8000
+```
+
+> No Windows (PowerShell): `\$env:DATABASE_URL="sqlite:///./demo.db"`
+
 ### Executar Testes
 
 ```bash
