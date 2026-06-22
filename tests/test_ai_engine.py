@@ -72,10 +72,42 @@ class TestAIService:
                 mock_genai.Client.return_value = mock_client
                 # Simula JSON inválido
                 mock_client.models.generate_content.return_value.text = "resposta sem formato json"
-                
+
                 from src.core.ai_engine import AIService
                 service = AIService()
                 result = service.analyze_ticket("Teste")
-                
+
                 # Deve retornar valores default
                 assert result["urgencia"] == "Média"
+
+    def test_rewrite_response_success(self):
+        """Testa reescrita de resposta pela IA."""
+        with patch.dict('os.environ', {'AI_API_KEY': 'test_key'}):
+            with patch('src.core.ai_engine.genai') as mock_genai:
+                mock_client = MagicMock()
+                mock_genai.Client.return_value = mock_client
+                mock_client.models.generate_content.return_value.text = "Texto reescrito formal."
+
+                from src.core.ai_engine import AIService
+                result = AIService().rewrite_response("oi", "mais formal")
+                assert result == "Texto reescrito formal."
+
+    def test_rewrite_response_fallback_to_original(self):
+        """Em caso de erro, a reescrita deve retornar o texto original."""
+        with patch.dict('os.environ', {'AI_API_KEY': 'test_key'}):
+            with patch('src.core.ai_engine.genai') as mock_genai:
+                mock_client = MagicMock()
+                mock_genai.Client.return_value = mock_client
+                mock_client.models.generate_content.side_effect = Exception("API down")
+
+                from src.core.ai_engine import AIService
+                result = AIService().rewrite_response("original", "qualquer")
+                assert result == "original"
+
+    def test_summarize_urgent_empty(self):
+        """Sem tickets urgentes, deve retornar mensagem padrão."""
+        with patch.dict('os.environ', {'AI_API_KEY': 'test_key'}):
+            with patch('src.core.ai_engine.genai') as mock_genai:
+                mock_genai.Client.return_value = MagicMock()
+                from src.core.ai_engine import AIService
+                assert "Nenhum" in AIService().summarize_urgent([])

@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Configurações{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Configurações</h1>
+    <p class="muted">Conecte seu e-mail e a IA para começar a usar</p>
+  </div>
+</header>
+
+<form id="settingsForm" class="settings-grid" onsubmit="return saveSettings(event)">
+  <div class="panel">
+    <h3>📧 Conexão de e-mail</h3>
+    <label>Provedor
+      <select name="email_provider">
+        {% for p in providers %}
+        <option value="{{ p }}" {{ 'selected' if settings.EMAIL_PROVIDER == p }}>{{ p|capitalize }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>E-mail
+      <input name="email_user" value="{{ settings.EMAIL_USER or '' }}" placeholder="voce@gmail.com" />
+    </label>
+    <label>Senha de app
+      <input name="email_pass" type="password" placeholder="{{ '•••••• (configurada)' if settings.EMAIL_PASS_set else 'senha de app' }}" />
+    </label>
+    <div class="cols">
+      <label>Servidor IMAP
+        <input name="imap_server" value="{{ settings.IMAP_SERVER or '' }}" />
+      </label>
+      <label>Servidor SMTP
+        <input name="smtp_server" value="{{ settings.SMTP_SERVER or '' }}" />
+      </label>
+      <label>Porta SMTP
+        <input name="smtp_port" value="{{ settings.SMTP_PORT or '587' }}" />
+      </label>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>🤖 Inteligência Artificial</h3>
+    <label>API Key (Google Gemini)
+      <input name="ai_api_key" type="password" placeholder="{{ '•••••• (configurada)' if settings.AI_API_KEY_set else 'sua chave da API' }}" />
+    </label>
+    <label>Modelo
+      <input name="gemini_model" value="{{ settings.GEMINI_MODEL or 'gemini-3.1-flash-lite' }}" />
+    </label>
+    <label>Intervalo de sincronização (minutos)
+      <input name="sync_interval_minutes" type="number" min="1" value="{{ settings.SYNC_INTERVAL_MINUTES or '2' }}" />
+    </label>
+    <label class="switch">
+      <input type="checkbox" name="auto_download_attachments" {{ 'checked' if settings.AUTO_DOWNLOAD_ATTACHMENTS == 'true' }} />
+      Baixar anexos automaticamente
+    </label>
+  </div>
+
+  <div class="panel">
+    <h3>📱 WhatsApp (resumo de urgentes)</h3>
+    <p class="muted small">Prepara o envio automático do resumo de e-mails urgentes ao responsável.</p>
+    <label class="switch">
+      <input type="checkbox" name="whatsapp_enabled" {{ 'checked' if settings.WHATSAPP_ENABLED == 'true' }} />
+      Ativar notificações por WhatsApp
+    </label>
+    <label>Número de destino
+      <input name="whatsapp_to" value="{{ settings.WHATSAPP_TO or '' }}" placeholder="+55 11 90000-0000" />
+    </label>
+  </div>
+
+  <div class="panel">
+    <h3>🏢 Marca</h3>
+    <label>Nome da empresa
+      <input name="company_name" value="{{ settings.COMPANY_NAME or 'Floatech' }}" />
+    </label>
+  </div>
+
+  <div class="settings-actions">
+    <button class="btn primary" type="submit">Salvar configurações</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/settings.js"></script>
+{% endblock %}

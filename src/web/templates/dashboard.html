@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Tickets de Suporte</h1>
+    <p class="muted">Classificados automaticamente por IA</p>
+  </div>
+  <div class="head-actions">
+    <button class="btn ghost" onclick="exportMenu()">▤ Exportar</button>
+    <button class="btn primary" id="syncBtn" onclick="syncNow()">⟳ Sincronizar</button>
+  </div>
+</header>
+
+{% if not email_ok or not ai_ok %}
+<div class="alert">
+  ⚠️ Configure {% if not email_ok %}o e-mail{% endif %}{% if not email_ok and not ai_ok %} e {% endif %}{% if not ai_ok %}a chave da IA{% endif %}
+  para começar. <a href="/settings">Ir para configurações →</a>
+</div>
+{% endif %}
+
+<section class="kpi-grid">
+  <div class="kpi"><span class="kpi-val">{{ summary.total }}</span><span class="kpi-lbl">Total</span></div>
+  <div class="kpi danger"><span class="kpi-val">{{ summary.urgentes }}</span><span class="kpi-lbl">Urgentes</span></div>
+  <div class="kpi warn"><span class="kpi-val">{{ summary.pendentes }}</span><span class="kpi-lbl">Pendentes</span></div>
+  <div class="kpi ok"><span class="kpi-val">{{ summary.resolvidos }}</span><span class="kpi-lbl">Resolvidos</span></div>
+</section>
+
+<section class="filters">
+  <input type="search" id="search" class="search" placeholder="🔍 Buscar por assunto, remetente..." oninput="debouncedLoad()" />
+  <div class="chips" id="catChips">
+    <button class="chip active" data-key="categoria" data-val="Todos">Todos</button>
+    <button class="chip" data-key="categoria" data-val="Técnico">Técnico</button>
+    <button class="chip" data-key="categoria" data-val="Financeiro">Financeiro</button>
+    <button class="chip" data-key="categoria" data-val="Logística">Logística</button>
+    <button class="chip" data-key="categoria" data-val="Outros">Outros</button>
+  </div>
+  <select id="urgFilter" class="select" onchange="loadTickets()">
+    <option value="Todos">Toda urgência</option>
+    <option value="Alta">Alta</option>
+    <option value="Média">Média</option>
+    <option value="Baixa">Baixa</option>
+  </select>
+  <select id="statusFilter" class="select" onchange="loadTickets()">
+    <option value="Todos">Todo status</option>
+    <option value="Pendente">Pendente</option>
+    <option value="Em Andamento">Em Andamento</option>
+    <option value="Resolvido">Resolvido</option>
+  </select>
+</section>
+
+<section id="cards" class="cards"></section>
+<div id="emptyState" class="empty" hidden>Nenhum ticket encontrado.</div>
+
+<!-- Modal de detalhes/resposta -->
+<div id="modal" class="modal" hidden>
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

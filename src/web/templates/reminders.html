@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Lembretes & Agenda{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Lembretes & Respostas Agendadas</h1>
+    <p class="muted">Acompanhe follow-ups e envios programados</p>
+  </div>
+</header>
+
+<section class="two-col">
+  <div class="panel">
+    <h3>Novo lembrete</h3>
+    <form id="reminderForm" class="form" onsubmit="return createReminder(event)">
+      <label>Título
+        <input name="title" required placeholder="Ex.: Retornar cliente X" />
+      </label>
+      <label>Observação
+        <textarea name="note" rows="2" placeholder="Detalhes..."></textarea>
+      </label>
+      <label>Lembrar em
+        <input type="datetime-local" name="remind_at" required />
+      </label>
+      <button class="btn primary" type="submit">Criar lembrete</button>
+    </form>
+  </div>
+
+  <div class="panel">
+    <h3>Lembretes</h3>
+    <ul class="list">
+      {% for r in reminders %}
+      <li class="list-item {{ 'done' if r.done }}">
+        <div>
+          <strong>{{ r.title }}</strong>
+          <span class="muted small">{{ r.remind_at.strftime('%d/%m/%Y %H:%M') if r.remind_at }}</span>
+          {% if r.note %}<div class="muted small">{{ r.note }}</div>{% endif %}
+        </div>
+        <div class="list-actions">
+          {% if not r.done %}
+          <button class="btn tiny ok" onclick="completeReminder({{ r.id }})">✓</button>
+          {% endif %}
+          <button class="btn tiny ghost" onclick="deleteReminder({{ r.id }})">✕</button>
+        </div>
+      </li>
+      {% else %}
+      <li class="muted">Nenhum lembrete cadastrado.</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+
+<div class="panel">
+  <h3>Respostas agendadas</h3>
+  <table class="table">
+    <thead><tr><th>Para</th><th>Assunto</th><th>Agendado</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for s in scheduled %}
+      <tr>
+        <td>{{ s.to_email }}</td>
+        <td>{{ s.subject }}</td>
+        <td>{{ s.scheduled_for.strftime('%d/%m/%Y %H:%M') if s.scheduled_for }}</td>
+        <td><span class="tag {{ s.status }}">{{ s.status }}</span></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" class="muted">Nenhuma resposta agendada.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/reminders.js"></script>
+{% endblock %}

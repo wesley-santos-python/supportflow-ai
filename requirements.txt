@@ -1,6 +1,15 @@
-flet>=0.80.0
-google-generativeai>=0.8.0
+# --- Web (SaaS) ---
+fastapi>=0.110.0
+uvicorn[standard]>=0.29.0
+jinja2>=3.1.0
+python-multipart>=0.0.9
+
+# --- Agendamento em background ---
+apscheduler>=3.10.0
+
+# --- IA / E-mail / Dados ---
+# SDK novo do Gemini (import: `from google import genai`)
+google-genai>=1.0.0
 python-dotenv>=1.0.0
 imap-tools>=1.0.0
 sqlalchemy>=2.0.0
-pyperclip>=1.9.0

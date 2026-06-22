@@ -4,8 +4,10 @@ Exceções customizadas do SupportFlow AI.
 Hierarquia:
     SupportFlowError (base)
     ├── EmailConnectionError
+    ├── EmailSendError
     ├── AIAnalysisError
-    └── DatabaseError
+    ├── DatabaseError
+    └── NotificationError
 """
 
 
@@ -23,6 +25,11 @@ class EmailConnectionError(SupportFlowError):
     pass
 
 
+class EmailSendError(SupportFlowError):
+    """Erro ao enviar e-mail via SMTP."""
+    pass
+
+
 class AIAnalysisError(SupportFlowError):
     """Erro na análise com Google Gemini AI."""
     pass
@@ -30,4 +37,9 @@ class AIAnalysisError(SupportFlowError):
 
 class DatabaseError(SupportFlowError):
     """Erro de operação no banco de dados SQLite."""
+    pass
+
+
+class NotificationError(SupportFlowError):
+    """Erro ao enviar notificação externa (ex.: WhatsApp)."""
     pass

@@ -1,0 +1,69 @@
+"""
+Aplicação web (FastAPI) do SupportFlow AI.
+
+Responsável por:
+    - Inicializar banco de dados e agendador no startup
+    - Encerrar o agendador no shutdown
+    - Montar arquivos estáticos e templates
+    - Registrar os roteadores de páginas e de API
+"""
+import os
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from src import config
+from src.core.scheduler import shutdown_scheduler, start_scheduler
+from src.data.db import init_db
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+_BASE_DIR = os.path.dirname(__file__)
+_TEMPLATES_DIR = os.path.join(_BASE_DIR, "templates")
+_STATIC_DIR = os.path.join(_BASE_DIR, "static")
+
+# Instância de templates compartilhada por todos os roteadores.
+templates = Jinja2Templates(directory=_TEMPLATES_DIR)
+
+
+def _inject_globals() -> None:
+    """Disponibiliza variáveis de marca globalmente nos templates."""
+    templates.env.globals["company_name"] = config.get("COMPANY_NAME", "Floatech")
+    templates.env.globals["app_name"] = config.get("APP_NAME", "SupportFlow AI")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Ciclo de vida da aplicação: prepara recursos e libera no encerramento."""
+    init_db()
+    _inject_globals()
+    start_scheduler()
+    logger.info("SupportFlow AI iniciado")
+    yield
+    shutdown_scheduler()
+
+
+def create_app() -> FastAPI:
+    """Cria e configura a instância FastAPI."""
+    app = FastAPI(
+        title="SupportFlow AI",
+        description="SaaS de gestão inteligente de tickets de suporte — by Floatech",
+        version="2.0.0",
+        lifespan=lifespan,
+    )
+
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+    # Import tardio evita ciclos durante a montagem.
+    from src.web.routes import api, pages
+
+    app.include_router(pages.router)
+    app.include_router(api.router, prefix="/api")
+
+    return app
+
+
+app = create_app()

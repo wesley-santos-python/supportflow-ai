@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{{ app_name }}{% endblock %} · {{ company_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">◇</div>
+        <div>
+          <div class="brand-name">{{ app_name }}</div>
+          <div class="brand-by">by {{ company_name }}</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="/" class="nav-item {{ 'active' if active == 'dashboard' }}">
+          <span class="nav-ico">▣</span> Dashboard
+        </a>
+        <a href="/analytics" class="nav-item {{ 'active' if active == 'analytics' }}">
+          <span class="nav-ico">◔</span> Análises
+        </a>
+        <a href="/reminders" class="nav-item {{ 'active' if active == 'reminders' }}">
+          <span class="nav-ico">⏰</span> Lembretes & Agenda
+        </a>
+        <a href="/report" class="nav-item {{ 'active' if active == 'report' }}">
+          <span class="nav-ico">▤</span> Relatórios
+        </a>
+        <a href="/settings" class="nav-item {{ 'active' if active == 'settings' }}">
+          <span class="nav-ico">⚙</span> Configurações
+        </a>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="badge-ai">⚡ Gemini 3.1 Flash Lite</div>
+        <div class="copyright">© 2026 {{ company_name }}</div>
+      </div>
+    </aside>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

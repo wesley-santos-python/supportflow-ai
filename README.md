@@ -3,16 +3,17 @@
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Flet](https://img.shields.io/badge/Flet-UI%20Framework-02569B?style=for-the-badge)
-![Gemini](https://img.shields.io/badge/Google%20Gemini-AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-Web%20SaaS-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Gemini](https://img.shields.io/badge/Gemini%203.1%20Flash%20Lite-AI-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-Database-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
 
-**Sistema inteligente de gestão de tickets de suporte com IA generativa**
+**SaaS de gestão inteligente de tickets de suporte com IA generativa**
+
+_by **Floatech** — Weslei Santos_
 
 [📋 Funcionalidades](#-funcionalidades) •
 [🚀 Instalação](#-instalação) •
 [⚙️ Configuração](#️-configuração) •
-[📖 Uso](#-uso) •
 [🏗️ Arquitetura](#️-arquitetura)
 
 </div>
@@ -21,12 +22,18 @@
 
 ## 📋 Funcionalidades
 
-- 📧 **Integração IMAP** - Busca automática de e-mails não lidos (Gmail/Outlook)
-- 🤖 **Análise com IA** - Classifica urgência, categoria e gera respostas usando Google Gemini
-- 🏷️ **Classificação Automática** - Urgência (Alta/Média/Baixa) e categoria (Técnico/Financeiro/Logística)
-- 💾 **Persistência SQLite** - Armazenamento local estruturado com SQLAlchemy
-- 🖥️ **Dashboard Moderno** - Interface dark mode com Flet framework
-- 📋 **Sugestão de Respostas** - IA gera respostas prontas para copiar/enviar
+- 🌐 **Interface web moderna** — dashboard responsivo em dark mode, com cards de tickets
+- 🤖 **Análise com IA (Gemini 3.1 Flash Lite)** — classifica urgência, categoria, resumo e gera resposta sugerida
+- 📊 **Painel de análise com gráficos** — distribuição por categoria, urgência, status e volume por dia
+- 🔍 **Filtros avançados** — por categoria, urgência, status e busca textual
+- ✉️ **Resposta pelo próprio SaaS** — envie a sugestão da IA, reescreva com instruções ou edite e anexe arquivos
+- 📅 **Agendamento de respostas** — programe o envio de e-mails para um horário futuro
+- ⏰ **Lembretes / follow-ups** — crie lembretes associados (ou não) a um ticket
+- 📎 **Anexos organizados** — download opcional sob demanda (estrutura por ticket), visualização e impressão pelo sistema
+- 📄 **Relatórios** — exportação em JSON/CSV e relatório imprimível (PDF via navegador)
+- ⚙️ **Configuração rápida** — conecte e-mail e IA pela própria interface, sem editar arquivos
+- 🔄 **Atualização automática** — sincronização de e-mails a cada 2 minutos (configurável)
+- 📱 **Pronto para WhatsApp** — resumo de e-mails urgentes preparado para envio ao responsável
 
 ---
 
@@ -35,8 +42,8 @@
 ### Pré-requisitos
 
 - Python 3.10 ou superior
-- Conta Google Cloud com API Gemini habilitada
-- Conta de e-mail com acesso IMAP habilitado
+- Conta Google com API Gemini habilitada
+- Conta de e-mail com acesso IMAP/SMTP (Gmail/Outlook)
 
 ### Passos
 
@@ -47,9 +54,8 @@ cd supportflow-ai
 
 # Crie o ambiente virtual
 python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# ou
-.venv\Scripts\activate     # Windows
+source .venv/bin/activate    # Linux/Mac
+# .venv\Scripts\activate     # Windows
 
 # Instale as dependências
 pip install -r requirements.txt
@@ -59,85 +65,72 @@ pip install -r requirements.txt
 
 ## ⚙️ Configuração
 
-### 1. Variáveis de Ambiente
+A configuração pode ser feita **inteiramente pela interface web** (recomendado)
+ou por variáveis de ambiente. Valores salvos na interface têm prioridade.
 
-Crie um arquivo `.env` na raiz do projeto:
+### Opção A — Pela interface (recomendado)
+
+1. Inicie a aplicação (veja abaixo) e acesse **Configurações**.
+2. Informe o provedor, e-mail e senha de app.
+3. Cole a API Key do Gemini.
+4. Salve — pronto para usar. ✅
+
+### Opção B — Arquivo `.env`
 
 ```env
-# Credenciais de E-mail (Gmail)
 EMAIL_USER=seu-email@gmail.com
 EMAIL_PASS=sua-senha-de-app
-
-# API Google Gemini
 AI_API_KEY=sua-chave-api-gemini
+GEMINI_MODEL=gemini-3.1-flash-lite
+SYNC_INTERVAL_MINUTES=2
 ```
 
-### 2. Configurar Gmail
-
-Para usar com Gmail, você precisa:
-
-1. Ativar **Verificação em 2 etapas** na sua conta Google
-2. Gerar uma **Senha de App** em [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-3. Usar essa senha no `EMAIL_PASS`
-
-### 3. Obter API Key do Gemini
-
-1. Acesse [Google AI Studio](https://aistudio.google.com/)
-2. Crie uma nova API Key
-3. Copie para o `AI_API_KEY`
+> **Gmail:** ative a verificação em 2 etapas e gere uma
+> [Senha de App](https://myaccount.google.com/apppasswords).
+> **Gemini:** obtenha a chave no [Google AI Studio](https://aistudio.google.com/).
 
 ---
 
 ## 📖 Uso
 
-### Executar o Dashboard
+### Iniciar o SaaS
 
 ```bash
 python main.py
+# ou, com reload em desenvolvimento:
+uvicorn src.web.app:app --reload
 ```
 
-O dashboard será aberto automaticamente no navegador.
+Acesse **http://127.0.0.1:8000** no navegador.
 
-### Executar Testes
+| Página | Descrição |
+|--------|-----------|
+| **Dashboard** | Cards de tickets, filtros, sincronização e resposta |
+| **Análises** | Gráficos por categoria, urgência, status e volume diário |
+| **Lembretes & Agenda** | Lembretes e respostas agendadas |
+| **Relatórios** | Exportação JSON/CSV e relatório imprimível |
+| **Configurações** | Conexão de e-mail, IA, WhatsApp e marca |
+
+### Executar testes
 
 ```bash
 pytest tests/ -v
 ```
 
-### Exportar Dados
-
-Clique no botão **Exportar JSON** no dashboard para baixar todos os tickets em formato JSON.
-
 ---
 
 ## 🗄️ Trocar Banco de Dados
 
-Por padrão, o SupportFlow AI usa **SQLite** (arquivo local). Para usar **MySQL** ou **PostgreSQL**:
-
-### 1. Instale o driver
+Por padrão usa **SQLite**. Para MySQL/PostgreSQL, basta exportar `DATABASE_URL`:
 
 ```bash
 # MySQL
-pip install pymysql
-
+export DATABASE_URL="mysql+pymysql://usuario:senha@servidor:3306/nome_banco"
 # PostgreSQL
-pip install psycopg2-binary
+export DATABASE_URL="postgresql://usuario:senha@servidor:5432/nome_banco"
 ```
 
-### 2. Altere `src/data/db.py`
-
-```python
-# De (SQLite local):
-DATABASE_URL = "sqlite:///./support_flow.db"
-
-# Para MySQL:
-DATABASE_URL = "mysql+pymysql://usuario:senha@servidor:3306/nome_banco"
-
-# Para PostgreSQL:
-DATABASE_URL = "postgresql://usuario:senha@servidor:5432/nome_banco"
-```
-
-O SQLAlchemy cuida de toda migração automaticamente!
+O SQLAlchemy cuida da criação das tabelas automaticamente.
 
 ---
 
@@ -145,25 +138,28 @@ O SQLAlchemy cuida de toda migração automaticamente!
 
 ```
 supportflow-ai/
-├── main.py                    # Ponto de entrada
+├── main.py                     # Ponto de entrada (Uvicorn)
 ├── src/
-│   ├── core/                  # 🧠 Lógica de negócio
-│   │   ├── ai_engine.py       # Integração Google Gemini
-│   │   ├── automation.py      # Orquestrador de fluxo
-│   │   └── email_service.py   # Cliente IMAP
-│   ├── data/                  # 💾 Camada de dados
-│   │   ├── db.py              # Funções CRUD SQLAlchemy
-│   │   └── models.py          # Modelo ORM Ticket
-│   ├── ui/                    # 🎨 Interface do usuário
-│   │   ├── dashboard.py       # Dashboard principal
-│   │   └── components.py      # Componentes reutilizáveis
-│   ├── utils/                 # 🔧 Utilitários
-│   │   └── logger.py          # Sistema de logging
-│   └── exceptions.py          # Exceções customizadas
-└── tests/                     # 🧪 Testes automatizados
-    ├── test_ai_engine.py
-    ├── test_db.py
-    └── test_email_service.py
+│   ├── config.py               # ⚙️ Configuração (DB + .env + padrões)
+│   ├── core/                   # 🧠 Lógica de negócio
+│   │   ├── ai_engine.py        # Integração Gemini (análise/reescrita/resumo)
+│   │   ├── automation.py       # Orquestrador (e-mail → IA → banco, respostas)
+│   │   ├── email_service.py    # Cliente IMAP (leitura) + SMTP (envio)
+│   │   ├── attachments.py      # Download organizado de anexos
+│   │   ├── scheduler.py        # APScheduler (sync 2min, agendamentos, lembretes)
+│   │   ├── reports.py          # Geração de relatórios (JSON/CSV/HTML)
+│   │   └── notifications.py    # Resumo de urgentes (WhatsApp — preparado)
+│   ├── data/                   # 💾 Camada de dados
+│   │   ├── db.py               # CRUD, filtros, analytics e configurações
+│   │   └── models.py           # Tickets, Anexos, Lembretes, Agendados, Settings
+│   ├── web/                    # 🎨 Camada web (FastAPI)
+│   │   ├── app.py              # App factory + lifecycle + scheduler
+│   │   ├── routes/             # Rotas de páginas e API
+│   │   ├── templates/          # Templates Jinja2
+│   │   └── static/             # CSS e JS
+│   ├── utils/logger.py         # 🔧 Logging
+│   └── exceptions.py           # Exceções customizadas
+└── tests/                      # 🧪 Testes automatizados
 ```
 
 ### Fluxo de Dados
@@ -172,12 +168,14 @@ supportflow-ai/
 flowchart LR
     A[📧 E-mail IMAP] --> B[EmailService]
     B --> C[SupportController]
-    C --> D[🤖 AIService]
-    D --> E[Gemini API]
-    E --> D
+    C --> D[🤖 AIService · Gemini]
     D --> C
-    C --> F[💾 Database]
-    F --> G[🖥️ Dashboard]
+    C --> E[💾 Banco de Dados]
+    E --> F[🌐 FastAPI]
+    F --> G[🖥️ Dashboard Web]
+    H[⏱️ Scheduler 2min] --> C
+    C --> I[✉️ SMTP / 📅 Agendados]
+    E --> J[📱 Resumo urgentes → WhatsApp]
 ```
 
 ---
@@ -186,80 +184,35 @@ flowchart LR
 
 | Tecnologia | Uso |
 |------------|-----|
-| **Flet** | Framework UI Python (Flutter-based) |
-| **SQLAlchemy** | ORM para banco de dados |
-| **SQLite** | Banco de dados local |
-| **Google Gemini** | IA generativa para análise |
-| **imap-tools** | Cliente IMAP moderno |
-| **python-dotenv** | Gerenciamento de variáveis de ambiente |
-| **pytest** | Framework de testes |
+| **FastAPI + Uvicorn** | Framework web assíncrono (SaaS) |
+| **Jinja2** | Templates server-side |
+| **Chart.js** | Gráficos do painel de análise |
+| **APScheduler** | Tarefas em background (sync, agendamentos, lembretes) |
+| **SQLAlchemy** | ORM (SQLite/MySQL/PostgreSQL) |
+| **Google Gemini 3.1 Flash Lite** | IA generativa para análise |
+| **imap-tools / smtplib** | Leitura e envio de e-mail |
+| **pytest** | Testes automatizados |
 
 ---
 
-## 📊 Modelo de Dados
+## 📱 Integração com WhatsApp (preparada)
 
-### Ticket
-
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id` | Integer | Chave primária auto-incremento |
-| `uid` | String | ID único do e-mail (IMAP) |
-| `sender` | String | Remetente do e-mail |
-| `subject` | String | Assunto do e-mail |
-| `body` | Text | Corpo do e-mail |
-| `urgencia` | String | Alta / Média / Baixa |
-| `categoria` | String | Técnico / Financeiro / Logística / Outros |
-| `resumo` | Text | Resumo gerado pela IA |
-| `resposta_sugerida` | Text | Resposta gerada pela IA |
-| `status` | String | Pendente / Em Andamento / Resolvido |
-| `created_at` | DateTime | Data de criação |
-
----
-
-## 🤝 Contribuindo
-
-1. Faça um fork do projeto
-2. Crie sua branch de feature (`git checkout -b feature/nova-feature`)
-3. Commit suas mudanças (`git commit -m 'Adiciona nova feature'`)
-4. Push para a branch (`git push origin feature/nova-feature`)
-5. Abra um Pull Request
+O envio do resumo de e-mails urgentes ao responsável já está estruturado em
+`src/core/notifications.py`. Ao habilitar nas configurações, o sistema gera o
+resumo via IA e o despacha. A integração com um provedor real (Twilio / Meta
+Cloud API) é um ponto de extensão isolado em `WhatsAppNotifier._send`, sem
+impacto no restante do sistema.
 
 ---
 
 ## 🔒 Segurança e Privacidade
 
-### Seus dados estão seguros
-
-| Aspecto | Garantia |
-|---------|----------|
-| **Armazenamento** | 100% local no seu computador |
-| **Banco de dados** | SQLite local (não vai para nenhum servidor) |
-| **Credenciais** | Armazenadas apenas no seu arquivo `.env` |
-| **Código** | 100% open-source e auditável |
-
-### Sobre a IA (Google Gemini)
-
-> **A IA NÃO armazena seus dados!**
-
-- O Google Gemini recebe apenas o **texto do e-mail** para análise
-- A análise é feita em tempo real e **descartada imediatamente** após
-- A Google confirma que dados via API **não são usados para treinar modelos**
-- Veja a [Política de Privacidade da API Gemini](https://ai.google.dev/gemini-api/terms)
-
-### O que a Floatech pode ver?
-
-**NADA.** 🔐
-
-- Não temos acesso aos seus e-mails
-- Não temos acesso ao seu banco de dados
-- Não temos acesso às suas credenciais
-- O sistema roda **100% na sua máquina**
-
-### Recomendações de Segurança
-
-1. **Nunca compartilhe** seu arquivo `.env`
-2. **Use senhas de app** em vez da senha principal do e-mail
-3. **Mantenha o sistema atualizado** com as últimas versões
+- **Local-first:** o sistema roda 100% na sua máquina; o banco é local.
+- **Credenciais:** ficam no `.env` ou no banco local — nunca saem do ambiente.
+- **IA:** o Gemini recebe apenas o texto do e-mail para análise; dados via API
+  [não são usados para treino](https://ai.google.dev/gemini-api/terms).
+- **Anexos:** só são baixados quando você solicita (ou se habilitar o download
+  automático).
 
 ---
 
@@ -267,17 +220,14 @@ flowchart LR
 
 **© 2026 Floatech - Weslei Santos. Todos os direitos reservados.**
 
-Este projeto é parte de um portfólio profissional e propriedade intelectual de seu autor.
-O código-fonte é disponibilizado publicamente apenas para fins de **demonstração e avaliação técnica**.
-
-❌ É proibido o uso comercial, cópia, modificação ou redistribuição sem autorização prévia por escrito.
-
-Para consultas sobre licenciamento ou contratação, entre em contato via LinkedIn.
+Projeto de portfólio profissional. Código disponibilizado apenas para fins de
+demonstração e avaliação técnica. É proibido o uso comercial, cópia,
+modificação ou redistribuição sem autorização prévia por escrito.
 
 ---
 
 <div align="center">
 
-**Desenvolvido com ❤️ por Weslei Santos**
+**Desenvolvido com ❤️ por Weslei Santos · Floatech**
 
 </div>

@@ -18,6 +18,11 @@ __pycache__/
 *.db
 *.sqlite3
 
+# Dados gerados em runtime (anexos, uploads, relatórios)
+data/attachments/
+data/uploads/
+data/reports/
+
 # IDEs
 .idea/
 .vscode/

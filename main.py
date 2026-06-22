@@ -1,19 +1,25 @@
 """
-SupportFlow AI - Ponto de entrada da aplicação.
+SupportFlow AI — Ponto de entrada da aplicação web (SaaS).
 
 Sistema inteligente de gestão de tickets de suporte com IA generativa.
+Sobe o servidor web (FastAPI/Uvicorn). A interface fica disponível no
+navegador em http://127.0.0.1:8000
+
+Uso:
+    python main.py
+    # ou, para produção/reload:
+    uvicorn src.web.app:app --host 0.0.0.0 --port 8000
 """
-import flet as ft
-from src.ui.dashboard import main_dashboard
-from src.data.db import init_db
+import os
+
+import uvicorn
 
 
 def main() -> None:
-    """Inicializa o banco de dados e executa o dashboard."""
-    init_db()
-    # view=ft.AppView.FLET_APP → Janela desktop (padrão) 
-    # view=ft.AppView.WEB_BROWSER abre no navegador
-    ft.app(main_dashboard, view=ft.AppView.FLET_APP)
+    """Inicia o servidor web do SupportFlow AI."""
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("src.web.app:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":
