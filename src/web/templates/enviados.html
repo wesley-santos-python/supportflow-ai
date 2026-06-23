@@ -5,33 +5,65 @@
 <header class="page-head">
   <div>
     <h1>E-mails enviados</h1>
-    <p class="sub">Tickets que você já respondeu · {{ tickets|length }} no total</p>
+    <p class="sub">Tickets que você já respondeu</p>
   </div>
 </header>
 
+<section class="kpi-grid" style="grid-template-columns:repeat(2,minmax(0,260px))">
+  <div class="kpi">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-send"/></svg></div>
+    <div><div class="kpi-val">{{ tickets|length }}</div><div class="kpi-lbl">Total respondidos</div></div>
+  </div>
+  <div class="kpi ok">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-check-circle"/></svg></div>
+    <div><div class="kpi-val">{{ hoje }}</div><div class="kpi-lbl">Respondidos hoje</div></div>
+  </div>
+</section>
+
 {% if tickets %}
-<div class="panel">
-  <table class="table">
-    <thead>
-      <tr><th>Para</th><th>Assunto</th><th>Categoria</th><th>Urgência</th><th>Respondido em</th></tr>
-    </thead>
-    <tbody>
-      {% for t in tickets %}
-      <tr>
-        <td>{{ t.sender }}</td>
-        <td>{{ t.subject or '(sem assunto)' }}</td>
-        <td>{{ t.categoria }}</td>
-        <td><span class="tag urg-{{ t.urgencia }}">{{ t.urgencia }}</span></td>
-        <td class="muted small">{{ t.responded_at | brt }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<section class="toolbar">
+  <div class="search-wrap">
+    <svg class="ico sm"><use href="#i-search"/></svg>
+    <input type="search" id="sentSearch" class="search" placeholder="Filtrar por cliente ou assunto..." oninput="filterSent()" />
+  </div>
+</section>
+
+<section class="clients-grid" id="sentList">
+  {% for t in tickets %}
+  <details class="attach-group sent-card" data-q="{{ ((t.sender or '') ~ ' ' ~ (t.subject or ''))|lower }}">
+    <summary>
+      <div class="client-card-top">
+        <span class="badge {{ t.urgencia }}">{{ t.urgencia }}</span>
+        <div class="client-id">
+          <div class="client-email">{{ t.subject or '(sem assunto)' }}</div>
+          <div class="muted small">Para: {{ t.sender }} · {{ t.categoria }}</div>
+        </div>
+        <span class="muted small no-wrap">{{ t.responded_at | brt }}</span>
+        <svg class="ico sm chevron"><use href="#i-chevron-down"/></svg>
+      </div>
+    </summary>
+    <div class="attach-files">
+      <div class="muted small" style="margin-bottom:6px">Resposta enviada:</div>
+      <div class="original-body">{{ t.resposta_sugerida or '(conteúdo da resposta não registrado)' }}</div>
+    </div>
+  </details>
+  {% endfor %}
+</section>
 {% else %}
 <div class="empty">
   <svg class="ico"><use href="#i-send"/></svg>
   <p>Nenhum e-mail respondido ainda. As respostas que você enviar aparecem aqui.</p>
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterSent() {
+    const q = document.getElementById("sentSearch").value.toLowerCase().trim();
+    document.querySelectorAll("#sentList .sent-card").forEach((el) => {
+      el.hidden = q && !(el.dataset.q || "").includes(q);
+    });
+  }
+</script>
 {% endblock %}

@@ -201,6 +201,7 @@ a:hover { color: var(--accent-hover); }
 .head-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
+.no-wrap { white-space: nowrap; }
 
 /* Buttons ---------------------------------------------------------------- */
 .btn {

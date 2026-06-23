@@ -136,10 +136,32 @@ def enviados(request: Request):
     user = auth.current_user(request)
     if not user:
         return RedirectResponse("/login", status_code=303)
+
+    tickets = db.list_answered_tickets(user.id)
+
+    # Conta quantos foram respondidos HOJE (no horário de Brasília).
+    from datetime import datetime, timezone
+
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        from datetime import timedelta
+
+        tz = timezone(timedelta(hours=-3))
+    hoje_data = datetime.now(tz).date()
+    hoje = sum(
+        1
+        for t in tickets
+        if t.responded_at
+        and t.responded_at.replace(tzinfo=timezone.utc).astimezone(tz).date() == hoje_data
+    )
+
     return _templates().TemplateResponse(
         request,
         "enviados.html",
-        {"user": user.to_dict(), "active": "enviados", "tickets": db.list_answered_tickets(user.id)},
+        {"user": user.to_dict(), "active": "enviados", "tickets": tickets, "hoje": hoje},
     )
 
 
