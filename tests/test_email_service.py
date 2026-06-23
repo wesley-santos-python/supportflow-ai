@@ -68,11 +68,12 @@ class TestEmailService:
             from src.core.email_service import EmailService
             service = EmailService()
             
-            # Deve lançar exceção customizada
+            # Deve lançar exceção customizada com mensagem amigável + erro bruto em details
             with pytest.raises(EmailConnectionError) as exc_info:
                 service.fetch_unread_emails()
-            
-            assert "Falha ao conectar" in exc_info.value.message
+
+            assert exc_info.value.message  # mensagem amigável ao usuário
+            assert "Connection failed" in (exc_info.value.details or "")
 
     def test_mark_as_read(self, mock_env):
         """Testa marcação de e-mail como lido."""

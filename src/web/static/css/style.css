@@ -284,12 +284,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .card:hover .card-quick { opacity: 1; transform: translateY(0); }
 .card.resolved { opacity: .62; }
 .card.resolved .card-subject { text-decoration: line-through; text-decoration-color: var(--muted); }
+/* Faixa lateral colorida por nível de risco (urgência) */
+.card.urg-Alta { border-left: 3px solid var(--danger); }
+.card.urg-Média, .card.urg-Media { border-left: 3px solid var(--warn); }
+.card.urg-Baixa { border-left: 3px solid var(--accent); }
 
 /* Badges / tags ---------------------------------------------------------- */
 .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
   padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
-.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
-  box-shadow: 0 0 6px currentColor; }
+.badge .ico { width: 13px; height: 13px; }
 .badge.Alta { background: var(--danger-soft); color: var(--danger); }
 .badge.Média, .badge.Media { background: var(--warn-soft); color: var(--warn); }
 .badge.Baixa { background: var(--ok-soft); color: var(--ok); }

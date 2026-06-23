@@ -90,7 +90,29 @@ class EmailService:
         except Exception as e:
             logger.error(f"Erro ao acessar e-mail: {e}")
             raise EmailConnectionError(
-                message="Falha ao conectar com servidor de e-mail",
+                message=_friendly_imap_error(e, self.imap_server),
+                details=str(e),
+            )
+
+    def test_connection(self) -> None:
+        """
+        Verifica as credenciais autenticando no servidor IMAP.
+
+        Raises:
+            EmailConnectionError: com mensagem amigável explicando o motivo
+                (senha de app incorreta, servidor inacessível, etc.).
+        """
+        if not self.user or not self.password:
+            raise EmailConnectionError(
+                message="Informe o e-mail e a senha de app antes de testar."
+            )
+        try:
+            with MailBox(self.imap_server).login(self.user, self.password):
+                pass
+        except Exception as e:
+            logger.error(f"Teste de conexão de e-mail falhou: {e}")
+            raise EmailConnectionError(
+                message=_friendly_imap_error(e, self.imap_server),
                 details=str(e),
             )
 
@@ -222,3 +244,29 @@ class EmailService:
                 subtype=subtype or "octet-stream",
                 filename=os.path.basename(path),
             )
+
+
+def _friendly_imap_error(exc: Exception, imap_server: str) -> str:
+    """
+    Traduz um erro de IMAP em uma mensagem clara em português para o usuário.
+
+    A causa mais comum no Gmail é usar a senha normal da conta em vez de uma
+    "senha de app" — então essa orientação é destacada.
+    """
+    raw = str(exc).lower()
+    auth_keys = ("auth", "credential", "invalid", "login failed", "password", "username", "[alert]")
+    net_keys = ("getaddrinfo", "name or service", "resolve", "timed out", "timeout",
+                "connection", "refused", "unreachable", "ssl")
+
+    if any(k in raw for k in auth_keys):
+        return (
+            "E-mail ou senha incorretos. No Gmail, ative a verificação em duas "
+            "etapas e use uma SENHA DE APP (myaccount.google.com/apppasswords) — "
+            "não a senha normal da conta."
+        )
+    if any(k in raw for k in net_keys):
+        return (
+            f"Não foi possível conectar ao servidor IMAP ({imap_server}). "
+            "Verifique o servidor e a porta nas configurações."
+        )
+    return f"Falha ao conectar com o servidor de e-mail: {exc}"

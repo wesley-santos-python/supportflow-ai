@@ -4,6 +4,14 @@ const STATUSES = ["Pendente", "Em Andamento", "Resolvido"];
 let currentFilters = { categoria: "Todos", urgencia: "Todos", status: "Todos", search: "" };
 let activeTicket = null;
 
+/* Ícone de risco por nível de urgência (cor vem da classe .badge). */
+const URGENCY_ICON = { "Alta": "i-alert", "Média": "i-bell", "Baixa": "i-check-circle" };
+
+function urgencyBadge(urgencia) {
+  const u = urgencia || "Baixa";
+  return `<span class="badge ${u}">${icon(URGENCY_ICON[u] || "i-bell", "ico sm")} ${escapeHtml(u)}</span>`;
+}
+
 /* ------------------------------------------------------------------ Listagem */
 async function loadTickets() {
   currentFilters.urgencia = document.getElementById("urgFilter").value;
@@ -38,14 +46,14 @@ function renderCards(tickets) {
   tickets.forEach((t) => {
     const resolved = t.status === "Resolvido";
     const card = document.createElement("div");
-    card.className = "card" + (resolved ? " resolved" : "");
+    card.className = "card urg-" + (t.urgencia || "Baixa") + (resolved ? " resolved" : "");
     card.onclick = () => openTicket(t.id);
     card.innerHTML = `
       ${resolved ? "" : `<button class="btn tiny ok card-quick" title="Marcar como resolvido"
         onclick="quickResolve(${t.id}, event)">${icon("i-check", "ico sm")}</button>`}
       <div class="card-top">
         <span class="card-subject">${escapeHtml(t.subject || "(sem assunto)")}</span>
-        <span class="badge ${t.urgencia}">${escapeHtml(t.urgencia || "Baixa")}</span>
+        ${urgencyBadge(t.urgencia)}
       </div>
       <span class="card-sender">${icon("i-mail", "ico sm")} ${escapeHtml(t.sender || "")}</span>
       <span class="card-summary">${escapeHtml(t.resumo || "Análise pendente...")}</span>
@@ -130,7 +138,7 @@ function renderModal(t) {
   ).join("");
 
   document.getElementById("modalBody").innerHTML = `
-    <span class="badge ${t.urgencia}">${escapeHtml(t.urgencia)}</span>
+    ${urgencyBadge(t.urgencia)}
     <h2>${escapeHtml(t.subject || "(sem assunto)")}</h2>
     <p class="muted small">De: ${escapeHtml(t.sender)} · ${escapeHtml(t.categoria)}</p>
 

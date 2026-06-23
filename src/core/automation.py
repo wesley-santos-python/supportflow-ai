@@ -16,7 +16,7 @@ from typing import List, Optional
 from src.core.ai_engine import AIService
 from src.core.email_service import EmailService
 from src.data import db
-from src.exceptions import EmailConnectionError, EmailSendError
+from src.exceptions import EmailSendError
 from src.user_config import UserConfig
 from src.utils.logger import get_logger
 
@@ -48,12 +48,9 @@ class SupportController:
         """
         logger.info(f"Sincronizando e-mails (user={self.user_id})...")
 
-        try:
-            new_emails = self.email_api.fetch_unread_emails()
-        except EmailConnectionError as e:
-            logger.error(f"Falha na conexão (user={self.user_id}): {e.message}")
-            return 0
-
+        # Propaga EmailConnectionError para a UI mostrar o motivo real
+        # (senha de app incorreta, servidor errado, etc.) em vez de "0 tickets".
+        new_emails = self.email_api.fetch_unread_emails()
         if not new_emails:
             return 0
 

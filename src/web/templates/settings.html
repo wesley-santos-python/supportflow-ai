@@ -41,6 +41,9 @@
       <input type="checkbox" name="auto_download_attachments" {{ 'checked' if settings.AUTO_DOWNLOAD_ATTACHMENTS == 'true' }} />
       Baixar anexos automaticamente
     </label>
+    <button type="button" class="btn ghost" style="margin-top:10px" onclick="testEmail()">
+      <svg class="ico sm"><use href="#i-check-circle"/></svg> Testar conexão
+    </button>
   </div>
 
   <div class="panel">

@@ -19,8 +19,10 @@ from src.core import attachments as attachment_manager
 from src.core import reports
 from src.core.ai_engine import AIService
 from src.core.automation import SupportController
+from src.core.email_service import EmailService
 from src.data import db
 from src.data.models import ScheduledReply, User
+from src.exceptions import EmailConnectionError
 from src.user_config import UserConfig
 from src.utils.logger import get_logger
 from src.web.auth import require_api_user
@@ -77,7 +79,11 @@ class SettingsRequest(BaseModel):
 @router.post("/sync")
 def sync_now(user: User = Depends(require_api_user)):
     """Dispara uma sincronização manual de e-mails do cliente."""
-    processed = SupportController(user.id).run_sync()
+    try:
+        processed = SupportController(user.id).run_sync()
+    except EmailConnectionError as e:
+        # Mostra o motivo real (ex.: senha de app incorreta) em vez de "0 tickets".
+        raise HTTPException(status_code=400, detail=e.message)
     return {"processed": processed}
 
 
@@ -275,6 +281,16 @@ def save_settings(payload: SettingsRequest, user: User = Depends(require_api_use
         cfg.set("WHATSAPP_ENABLED", str(payload.whatsapp_enabled).lower())
 
     return {"ok": True, "settings": cfg.public_settings()}
+
+
+@router.post("/settings/test-email")
+def test_email(user: User = Depends(require_api_user)):
+    """Testa a conexão IMAP com as credenciais salvas e devolve o motivo de falha."""
+    try:
+        EmailService(UserConfig(user.id)).test_connection()
+    except EmailConnectionError as e:
+        raise HTTPException(status_code=400, detail=e.message)
+    return {"ok": True, "message": "Conexão bem-sucedida! Seu e-mail está pronto."}
 
 
 @router.get("/report.json")

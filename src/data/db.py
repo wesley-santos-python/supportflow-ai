@@ -60,6 +60,12 @@ _URGENCY_ORDER = case(
     else_=3,
 )
 
+# Tickets resolvidos afundam para o fim da lista (ficam abaixo dos abertos).
+_STATUS_ORDER = case(
+    (Ticket.status == "Resolvido", 2),
+    else_=1,
+)
+
 
 def init_db() -> None:
     """Cria as tabelas (se não existirem) e aplica migrações leves."""
@@ -275,7 +281,8 @@ def query_tickets(
                 | Ticket.sender.ilike(like)
                 | Ticket.resumo.ilike(like)
             )
-        return query.order_by(_URGENCY_ORDER, Ticket.created_at.desc()).all()
+        # Abertos antes de resolvidos; dentro de cada grupo, urgência e recência.
+        return query.order_by(_STATUS_ORDER, _URGENCY_ORDER, Ticket.created_at.desc()).all()
     finally:
         db.close()
 

@@ -1,11 +1,24 @@
-/* Renderização dos gráficos do painel de análise (Chart.js). */
+/* Renderização dos gráficos do painel de análise (Chart.js) — paleta Floatech. */
 
-const PALETTE = ["#22d3ee", "#3b82f6", "#f59e0b", "#fb7185", "#34d399", "#a855f7"];
-
-// Cores adaptadas ao tema atual (claro/escuro).
+// Lê os tokens da marca direto do CSS para acompanhar o tema (dark/light).
 const css = getComputedStyle(document.documentElement);
-Chart.defaults.color = css.getPropertyValue("--muted").trim() || "#8a98ad";
-Chart.defaults.borderColor = css.getPropertyValue("--border").trim() || "#243044";
+const tok = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+
+const ACCENT = tok("--accent", "#00E5C0");
+const DANGER = tok("--danger", "#FF6B6B");
+const WARN = tok("--warn", "#F5B544");
+const INFO = tok("--info", "#5CC8FF");
+const TEAL = "#00B8A9";
+
+// Paleta geral (categorias) — família Floatech, sem azul corporativo.
+const PALETTE = [ACCENT, TEAL, WARN, DANGER, INFO, "#AEF8EE"];
+
+// Cores semânticas por rótulo: risco em urgência, progresso em status.
+const URGENCY_COLORS = { Alta: DANGER, "Média": WARN, Media: WARN, Baixa: ACCENT };
+const STATUS_COLORS = { Pendente: WARN, "Em Andamento": INFO, Resolvido: ACCENT };
+
+Chart.defaults.color = tok("--muted", "#82858B");
+Chart.defaults.borderColor = tok("--border", "#1F2024");
 Chart.defaults.font.family = "Inter, sans-serif";
 
 function toEntries(obj) {
@@ -14,23 +27,28 @@ function toEntries(obj) {
   return { labels, values };
 }
 
-function doughnut(canvasId, dataObj) {
+/** Resolve a cor de cada fatia: usa o mapa semântico quando houver, senão a paleta. */
+function colorsFor(labels, map) {
+  return labels.map((label, i) => (map && map[label]) || PALETTE[i % PALETTE.length]);
+}
+
+function doughnut(canvasId, dataObj, map) {
   const { labels, values } = toEntries(dataObj);
   new Chart(document.getElementById(canvasId), {
     type: "doughnut",
     data: {
       labels,
-      datasets: [{ data: values, backgroundColor: PALETTE, borderWidth: 0 }],
+      datasets: [{ data: values, backgroundColor: colorsFor(labels, map), borderWidth: 0 }],
     },
     options: { plugins: { legend: { position: "bottom" } }, cutout: "62%" },
   });
 }
 
-function bars(canvasId, dataObj, color) {
+function bars(canvasId, dataObj, map) {
   const { labels, values } = toEntries(dataObj);
   new Chart(document.getElementById(canvasId), {
     type: "bar",
-    data: { labels, datasets: [{ data: values, backgroundColor: color, borderRadius: 6 }] },
+    data: { labels, datasets: [{ data: values, backgroundColor: colorsFor(labels, map), borderRadius: 6 }] },
     options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
   });
 }
@@ -42,7 +60,7 @@ function line(canvasId, dataObj) {
     data: {
       labels,
       datasets: [{
-        data: values, borderColor: "#15c8d4", backgroundColor: "rgba(21,200,212,.15)",
+        data: values, borderColor: ACCENT, backgroundColor: "rgba(0,229,192,.15)",
         fill: true, tension: 0.35, pointRadius: 3,
       }],
     },
@@ -52,7 +70,7 @@ function line(canvasId, dataObj) {
 
 document.addEventListener("DOMContentLoaded", () => {
   doughnut("catChart", SUMMARY.by_category);
-  doughnut("urgChart", SUMMARY.by_urgency);
-  bars("statusChart", SUMMARY.by_status, "#3b82f6");
+  doughnut("urgChart", SUMMARY.by_urgency, URGENCY_COLORS);
+  bars("statusChart", SUMMARY.by_status, STATUS_COLORS);
   line("dayChart", SUMMARY.by_day);
 });

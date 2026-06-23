@@ -194,3 +194,27 @@ class TestTicketActions:
 
         assert client.post(f"/api/tickets/{tid_b}/status", json={"status": "Resolvido"}).status_code == 404
         assert client.delete(f"/api/tickets/{tid_b}").status_code == 404
+
+    def test_ordering_urgent_first_resolved_last(self, client):
+        """Abertos no topo (urgência primeiro); resolvidos afundam para o fim."""
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        db.save_ticket({"user_id": user.id, "uid": "20", "sender": "x@x.com",
+                        "subject": "baixa-aberta", "urgencia": "Baixa", "status": "Pendente"})
+        db.save_ticket({"user_id": user.id, "uid": "21", "sender": "x@x.com",
+                        "subject": "alta-aberta", "urgencia": "Alta", "status": "Pendente"})
+        db.save_ticket({"user_id": user.id, "uid": "22", "sender": "x@x.com",
+                        "subject": "alta-resolvida", "urgencia": "Alta", "status": "Resolvido"})
+
+        subjects = [t["subject"] for t in client.get("/api/tickets").json()["tickets"]]
+        assert subjects == ["alta-aberta", "baixa-aberta", "alta-resolvida"]
+
+
+class TestEmailConnection:
+    """O teste de conexão de e-mail deve devolver um motivo claro."""
+
+    def test_test_email_without_config_returns_clear_error(self, client):
+        resp = client.post("/api/settings/test-email", json={})
+        assert resp.status_code == 400
+        assert "senha" in resp.json()["detail"].lower()

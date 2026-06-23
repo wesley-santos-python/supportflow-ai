@@ -29,7 +29,12 @@ async function api(url, options = {}) {
   const res = await fetch(url, options);
   if (!res.ok) {
     let detail = res.statusText;
-    try { detail = (await res.json()).detail || detail; } catch (_) {}
+    try {
+      const data = await res.json();
+      if (typeof data.detail === "string") detail = data.detail;
+      else if (Array.isArray(data.detail)) detail = data.detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+      else if (data.detail) detail = JSON.stringify(data.detail);
+    } catch (_) {}
     throw new Error(detail);
   }
   const ct = res.headers.get("content-type") || "";
