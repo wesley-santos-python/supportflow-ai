@@ -218,3 +218,16 @@ class TestEmailConnection:
         resp = client.post("/api/settings/test-email", json={})
         assert resp.status_code == 400
         assert "senha" in resp.json()["detail"].lower()
+
+    def test_test_email_uses_form_credentials(self, client):
+        """As credenciais digitadas no formulário são usadas no teste (não só as salvas)."""
+        from unittest.mock import patch
+
+        with patch("src.web.routes.api.EmailService") as MockSvc:
+            MockSvc.return_value.test_connection.return_value = None
+            resp = client.post(
+                "/api/settings/test-email",
+                json={"email_user": "x@gmail.com", "email_pass": "app-pass-123"},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True

@@ -18,21 +18,29 @@ async function saveSettings(event) {
   try {
     await postJSON("/api/settings", payload);
     toast("✓ Configurações salvas");
+    // Testa a conexão com o que foi digitado, ANTES de limpar o campo de senha.
+    if (payload.email_user) await testEmail();
     form.email_pass.value = "";
     form.whatsapp_token.value = "";
-    // Após salvar, testa a conexão para mostrar de imediato se as credenciais funcionam.
-    if (payload.email_user) testEmail();
   } catch (e) {
     toast("Erro: " + e.message, true);
   }
   return false;
 }
 
-/** Testa a conexão de e-mail (IMAP) e mostra o motivo claro em caso de falha. */
+/**
+ * Testa a conexão de e-mail (IMAP). Envia o que está no formulário; se a senha
+ * estiver em branco, o servidor usa a credencial já salva.
+ */
 async function testEmail() {
+  const form = document.getElementById("settingsForm");
   toast("Testando conexão de e-mail...");
   try {
-    const r = await postJSON("/api/settings/test-email", {});
+    const r = await postJSON("/api/settings/test-email", {
+      email_user: form.email_user.value,
+      email_pass: form.email_pass.value,
+      imap_server: form.imap_server.value,
+    });
     toast("✓ " + (r.message || "Conexão bem-sucedida!"));
   } catch (e) {
     toast("Conexão falhou: " + e.message, true);

@@ -286,11 +286,34 @@ def save_settings(payload: SettingsRequest, user: User = Depends(require_api_use
     return {"ok": True, "settings": cfg.public_settings()}
 
 
+class EmailTestRequest(BaseModel):
+    """Credenciais opcionais para testar; se vazias, usa as já salvas."""
+
+    email_user: Optional[str] = None
+    email_pass: Optional[str] = None
+    imap_server: Optional[str] = None
+
+
 @router.post("/settings/test-email")
-def test_email(user: User = Depends(require_api_user)):
-    """Testa a conexão IMAP com as credenciais salvas e devolve o motivo de falha."""
+def test_email(
+    payload: EmailTestRequest = EmailTestRequest(),
+    user: User = Depends(require_api_user),
+):
+    """
+    Testa a conexão IMAP e devolve o motivo claro em caso de falha.
+
+    Usa as credenciais enviadas no formulário (o que o usuário acabou de
+    digitar) quando presentes; senão, recai nas credenciais já salvas.
+    """
+    svc = EmailService(UserConfig(user.id))
+    if payload.email_user:
+        svc.user = payload.email_user
+    if payload.email_pass:
+        svc.password = payload.email_pass
+    if payload.imap_server:
+        svc.imap_server = payload.imap_server
     try:
-        EmailService(UserConfig(user.id)).test_connection()
+        svc.test_connection()
     except EmailConnectionError as e:
         raise HTTPException(status_code=400, detail=e.message)
     return {"ok": True, "message": "Conexão bem-sucedida! Seu e-mail está pronto."}
