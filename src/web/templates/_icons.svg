@@ -1,15 +1,17 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <defs>
-    <linearGradient id="fl-grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#22d3ee"/>
-      <stop offset="1" stop-color="#3b82f6"/>
-    </linearGradient>
+    <radialGradient id="fl-glow" cx="50%" cy="42%" r="55%">
+      <stop offset="0" stop-color="#00E5C0" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#00E5C0" stop-opacity="0"/>
+    </radialGradient>
 
-    <!-- Logo Floatech: tile gradiente + monograma "F" com fluxo (float) -->
+    <!-- Logo Floatech — símbolo "Menisco": ponto em equilíbrio sobre arco côncavo.
+         Nada se toca: a flutuação vem do vazio calibrado. Ciano só no ponto. -->
     <symbol id="logo-floatech" viewBox="0 0 40 40">
-      <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#fl-grad)"/>
-      <path d="M15 11h11a1.5 1.5 0 0 1 0 3h-9.5v5H24a1.5 1.5 0 0 1 0 3h-7.5v7a1.5 1.5 0 0 1-3 0V12.5A1.5 1.5 0 0 1 15 11z" fill="#fff"/>
-      <path d="M27 27c2.2 0 3.8-1.2 4.5-3" stroke="#fff" stroke-width="2.2" stroke-linecap="round" fill="none" opacity="0.85"/>
+      <rect x="0.6" y="0.6" width="38.8" height="38.8" rx="11" fill="#0E1417" stroke="#1F2024" stroke-width="1.2"/>
+      <circle cx="20" cy="15.5" r="9" fill="url(#fl-glow)"/>
+      <path d="M10 25 Q20 32.4 30 25" stroke="#F5F6F7" stroke-width="3" stroke-linecap="round" fill="none"/>
+      <circle cx="20" cy="15.5" r="4" fill="#00E5C0"/>
     </symbol>
 
     <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></symbol>
@@ -41,5 +43,6 @@
     <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
     <symbol id="i-check-circle" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
   </defs>
 </svg>

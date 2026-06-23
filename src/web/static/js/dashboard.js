@@ -1,5 +1,6 @@
-/* Lógica do dashboard: filtros, cards, modal de resposta e sincronização. */
+/* Lógica do dashboard: filtros, cards, modal de resposta, status e sincronização. */
 
+const STATUSES = ["Pendente", "Em Andamento", "Resolvido"];
 let currentFilters = { categoria: "Todos", urgencia: "Todos", status: "Todos", search: "" };
 let activeTicket = null;
 
@@ -35,10 +36,13 @@ function renderCards(tickets) {
   empty.hidden = tickets.length > 0;
 
   tickets.forEach((t) => {
+    const resolved = t.status === "Resolvido";
     const card = document.createElement("div");
-    card.className = "card";
+    card.className = "card" + (resolved ? " resolved" : "");
     card.onclick = () => openTicket(t.id);
     card.innerHTML = `
+      ${resolved ? "" : `<button class="btn tiny ok card-quick" title="Marcar como resolvido"
+        onclick="quickResolve(${t.id}, event)">${icon("i-check", "ico sm")}</button>`}
       <div class="card-top">
         <span class="card-subject">${escapeHtml(t.subject || "(sem assunto)")}</span>
         <span class="badge ${t.urgencia}">${escapeHtml(t.urgencia || "Baixa")}</span>
@@ -121,10 +125,19 @@ function renderModal(t) {
       </span>
     </div>`).join("");
 
+  const seg = STATUSES.map((s) =>
+    `<button data-status="${s}" class="${t.status === s ? "on" : ""}" onclick="setStatus(${t.id}, '${s}')">${s}</button>`
+  ).join("");
+
   document.getElementById("modalBody").innerHTML = `
     <span class="badge ${t.urgencia}">${escapeHtml(t.urgencia)}</span>
     <h2>${escapeHtml(t.subject || "(sem assunto)")}</h2>
-    <p class="muted small">De: ${escapeHtml(t.sender)} · ${escapeHtml(t.categoria)} · ${escapeHtml(t.status)}</p>
+    <p class="muted small">De: ${escapeHtml(t.sender)} · ${escapeHtml(t.categoria)}</p>
+
+    <div class="modal-section modal-row" style="justify-content:space-between">
+      <div class="seg" id="statusSeg">${seg}</div>
+      <button class="btn danger tiny" onclick="deleteTicket(${t.id})">${icon("i-trash", "ico sm")} Excluir</button>
+    </div>
 
     <div class="field">
       <label>Resumo</label>
@@ -132,7 +145,10 @@ function renderModal(t) {
     </div>
 
     <div class="modal-section">
-      <label class="muted small">Resposta (sugestão automática — edite à vontade)</label>
+      <div class="modal-row" style="justify-content:space-between">
+        <label class="muted small">Resposta (sugestão automática — edite à vontade)</label>
+        <button class="btn tiny ghost" onclick="copyResponse()">${icon("i-copy", "ico sm")} Copiar</button>
+      </div>
       <textarea id="replyBody" rows="6">${escapeHtml(t.resposta_sugerida || "")}</textarea>
       <div class="modal-row" style="margin-top:10px">
         <input id="rewriteInstruction" style="flex:1" placeholder="Refinar resposta: ex. 'mais formal'" />
@@ -153,6 +169,52 @@ function renderModal(t) {
       </div>
       <button class="btn primary" onclick="sendReply(${t.id})">${icon("i-send", "ico sm")} Enviar agora</button>
     </div>`;
+}
+
+/* --------------------------------------------------------------- Status */
+async function setStatus(id, status) {
+  try {
+    await postJSON(`/api/tickets/${id}/status`, { status });
+    if (activeTicket) activeTicket.status = status;
+    document.querySelectorAll("#statusSeg button").forEach((b) =>
+      b.classList.toggle("on", b.dataset.status === status));
+    toast(`Status atualizado: ${status}`);
+    loadTickets();
+  } catch (e) {
+    toast("Erro: " + e.message, true);
+  }
+}
+
+async function quickResolve(id, ev) {
+  ev.stopPropagation();
+  try {
+    await postJSON(`/api/tickets/${id}/status`, { status: "Resolvido" });
+    toast("Ticket marcado como resolvido");
+    loadTickets();
+  } catch (e) {
+    toast("Erro: " + e.message, true);
+  }
+}
+
+async function deleteTicket(id) {
+  if (!confirm("Excluir este ticket? Esta ação não pode ser desfeita.")) return;
+  try {
+    await api(`/api/tickets/${id}`, { method: "DELETE" });
+    toast("Ticket excluído");
+    closeModal();
+    loadTickets();
+  } catch (e) {
+    toast("Erro: " + e.message, true);
+  }
+}
+
+function copyResponse() {
+  const text = document.getElementById("replyBody").value;
+  if (!navigator.clipboard) return toast("Cópia não suportada neste navegador", true);
+  navigator.clipboard.writeText(text).then(
+    () => toast("Resposta copiada"),
+    () => toast("Não foi possível copiar", true)
+  );
 }
 
 /* --------------------------------------------------------------- Ações IA */

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" role="img" aria-label="Floatech">
+  <rect width="64" height="64" rx="14" fill="#08090A"/>
+  <!-- Menisco: ponto em equilíbrio sobre arco côncavo (ciano só no ponto) -->
+  <g transform="translate(7,8.5) scale(0.5)">
+    <path d="M18 58 Q50 78 82 58" stroke="#F5F6F7" stroke-width="9" stroke-linecap="round"/>
+    <circle cx="50" cy="36" r="12" fill="#00E5C0"/>
+  </g>
+</svg>

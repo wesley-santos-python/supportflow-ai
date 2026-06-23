@@ -143,3 +143,54 @@ class TestTenantIsolation:
         tickets = client.get("/api/tickets").json()["tickets"]
         assert len(tickets) == 1
         assert tickets[0]["subject"] == "A"
+
+
+class TestHealth:
+    """Endpoint de health-check (sem autenticação)."""
+
+    def test_healthz_ok(self, anon_client):
+        resp = anon_client.get("/healthz")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["status"] == "ok"
+        assert body["version"]
+
+
+class TestTicketActions:
+    """Mudança de status, exclusão e isolamento das ações por cliente."""
+
+    def test_status_update_and_delete(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        ticket_id = db.save_ticket(
+            {"user_id": user.id, "uid": "10", "sender": "x@x.com", "subject": "Teste"}
+        )
+
+        resp = client.post(f"/api/tickets/{ticket_id}/status", json={"status": "Resolvido"})
+        assert resp.status_code == 200
+        assert client.get(f"/api/tickets/{ticket_id}").json()["status"] == "Resolvido"
+
+        assert client.delete(f"/api/tickets/{ticket_id}").status_code == 200
+        assert client.get(f"/api/tickets/{ticket_id}").status_code == 404
+
+    def test_status_filter(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        tid = db.save_ticket({"user_id": user.id, "uid": "11", "sender": "x@x.com", "subject": "P"})
+        client.post(f"/api/tickets/{tid}/status", json={"status": "Resolvido"})
+
+        resolved = client.get("/api/tickets?status=Resolvido").json()["tickets"]
+        assert [t["id"] for t in resolved] == [tid]
+        assert client.get("/api/tickets?status=Pendente").json()["tickets"] == []
+
+    def test_cannot_touch_other_tenant_ticket(self, client):
+        """Cliente A não pode alterar nem excluir ticket do cliente B (404)."""
+        from src.data import db
+
+        uid_b = db.create_user("Cliente B", "b2@test.com", "x")
+        tid_b = db.save_ticket({"user_id": uid_b, "uid": "99", "sender": "y@y.com", "subject": "B"})
+
+        assert client.post(f"/api/tickets/{tid_b}/status", json={"status": "Resolvido"}).status_code == 404
+        assert client.delete(f"/api/tickets/{tid_b}").status_code == 404

@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from src import config
@@ -64,7 +65,15 @@ def create_app() -> FastAPI:
         same_site="lax",
     )
 
+    # Compressão das respostas (HTML/JSON/CSS) — páginas mais leves e rápidas.
+    app.add_middleware(GZipMiddleware, minimum_size=600)
+
     app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+    @app.get("/healthz", include_in_schema=False)
+    def healthz():
+        """Health-check leve para o Railway/monitoramento (sem autenticação)."""
+        return {"status": "ok", "app": app.title, "version": app.version}
 
     # Import tardio evita ciclos durante a montagem.
     from src.web.routes import api, auth_routes, pages
