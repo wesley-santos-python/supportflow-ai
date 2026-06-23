@@ -11,7 +11,12 @@ As credenciais e servidores vêm de um provedor de configuração — pode ser o
 módulo global :mod:`src.config` (env/variáveis) ou uma
 :class:`~src.user_config.UserConfig` escopada a um cliente (multi-tenant).
 """
+import base64
+import json
+import os
 import smtplib
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
 from typing import Any, Dict, List, Optional
 
@@ -37,6 +42,26 @@ def _clean_header(value: Optional[str]) -> str:
     if not value:
         return ""
     return " ".join(str(value).replace("\r", "\n").split("\n")).strip()
+
+
+def _friendly_resend_error(status: int, detail: str) -> str:
+    """Traduz erros comuns da API do Resend em mensagens claras para a UI."""
+    low = (detail or "").lower()
+    if status in (401, 403) or "api key" in low or "unauthorized" in low:
+        return (
+            "A chave do Resend (RESEND_API_KEY) é inválida ou expirou. "
+            "Gere uma nova no painel do Resend e atualize as Variables do Railway."
+        )
+    if "domain" in low or "not verified" in low or "from" in low:
+        return (
+            "O domínio do remetente não está verificado no Resend. Verifique o "
+            "domínio em RESEND_FROM (ex.: floatech.app) no painel do Resend."
+        )
+    if status == 422:
+        return f"E-mail recusado pelo serviço de envio: {detail}"
+    if status == 429:
+        return "Limite de envios do Resend atingido. Tente novamente mais tarde."
+    return f"Falha no serviço de envio (Resend, HTTP {status})."
 
 
 # Mensagem usada quando não há credenciais legíveis (não configurado ou a
@@ -212,25 +237,49 @@ class EmailService:
         Raises:
             EmailSendError: Se o envio falhar.
         """
-        if not self.user or not self.password:
-            raise EmailSendError(message=_RESAVE_MSG)
+        clean_subject = _clean_header(subject) or "Re: Suporte"
+        clean_to = _clean_header(to_email)
 
-        message = EmailMessage()
-        message["From"] = _clean_header(self.user)
-        message["To"] = _clean_header(to_email)
-        message["Subject"] = _clean_header(subject) or "Re: Suporte"
-        message.set_content(body)
-
-        # Versão HTML (template escolhido) como alternativa, salvo se o cliente
-        # preferir e-mail em texto puro (EMAIL_FORMAT="plain").
+        # Versão HTML (template escolhido), salvo se o cliente preferir texto
+        # puro (EMAIL_FORMAT="plain"). Vale para os dois caminhos de envio.
+        html_body = None
         if str(self._cfg.get("EMAIL_FORMAT") or "html").lower() != "plain":
             from src.core.email_templates import branding_from_cfg, render_email
 
             try:
                 html_body = render_email(body, branding_from_cfg(self._cfg))
-                message.add_alternative(html_body, subtype="html")
             except Exception as exc:  # pragma: no cover - degrada para texto
                 logger.warning(f"Falha ao renderizar HTML, enviando texto: {exc}")
+
+        # Caminho preferido: API HTTP do Resend (porta 443). Resolve o bloqueio
+        # de SMTP de saída do Railway e funciona para TODOS os clientes através
+        # de uma única conta central (RESEND_API_KEY nas Variables do Railway).
+        # O remetente é o domínio verificado (RESEND_FROM); o Reply-To é o
+        # e-mail do próprio cliente, então a resposta do cliente final cai na
+        # caixa dele.
+        resend_key = config.get("RESEND_API_KEY")
+        if resend_key:
+            return self._send_via_resend(
+                api_key=resend_key,
+                to_email=clean_to,
+                subject=clean_subject,
+                text_body=body,
+                html_body=html_body,
+                reply_to=_clean_header(self.user),
+                attachments=attachments,
+            )
+
+        # Caminho legado (dev/local, ou quem ainda usa SMTP próprio).
+        if not self.user or not self.password:
+            raise EmailSendError(message=_RESAVE_MSG)
+
+        message = EmailMessage()
+        message["From"] = _clean_header(self.user)
+        message["To"] = clean_to
+        message["Subject"] = clean_subject
+        message.set_content(body)
+        if html_body:
+            message.add_alternative(html_body, subtype="html")
 
         for path in attachments or []:
             self._attach_file(message, path)
@@ -245,6 +294,72 @@ class EmailService:
         except Exception as e:
             logger.error(f"Erro ao enviar e-mail: {e}")
             raise EmailSendError(message=_friendly_imap_error(e, self.smtp_server), details=str(e))
+
+    def _send_via_resend(
+        self,
+        api_key: str,
+        to_email: str,
+        subject: str,
+        text_body: str,
+        html_body: Optional[str],
+        reply_to: Optional[str],
+        attachments: Optional[List[str]] = None,
+    ) -> bool:
+        """Envia a resposta pela API HTTP do Resend (https://resend.com)."""
+        from_addr = (
+            config.get("RESEND_FROM")
+            or "Suporte Floatech <atendimento@floatech.app>"
+        )
+        payload: Dict[str, Any] = {
+            "from": from_addr,
+            "to": [to_email],
+            "subject": subject,
+            "text": text_body,
+        }
+        if html_body:
+            payload["html"] = html_body
+        if reply_to:
+            payload["reply_to"] = reply_to
+
+        files = []
+        for path in attachments or []:
+            try:
+                with open(path, "rb") as fh:
+                    content = base64.b64encode(fh.read()).decode("ascii")
+                files.append({"filename": os.path.basename(path), "content": content})
+            except OSError as exc:  # pragma: no cover - anexo sumiu do disco
+                logger.warning(f"Anexo ignorado ({path}): {exc}")
+        if files:
+            payload["attachments"] = files
+
+        data = json.dumps(payload).encode("utf-8")
+        request = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=data,
+            method="POST",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=20) as resp:
+                resp.read()
+            logger.info(f"Resposta enviada via Resend para {to_email}")
+            return True
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace") if exc.fp else str(exc)
+            logger.error(f"Erro Resend ({exc.code}): {detail}")
+            raise EmailSendError(
+                message=_friendly_resend_error(exc.code, detail), details=detail
+            )
+        except Exception as exc:
+            logger.error(f"Erro ao enviar via Resend: {exc}")
+            raise EmailSendError(
+                message="Falha ao enviar o e-mail pelo serviço de envio (Resend). "
+                "Tente novamente em instantes.",
+                details=str(exc),
+            )
 
     # ------------------------------------------------------------------
     # Helpers internos

@@ -1,6 +1,7 @@
 """
 Testes para o serviço de e-mail.
 """
+import json
 import pytest
 from unittest.mock import patch, MagicMock
 from datetime import datetime
@@ -97,6 +98,38 @@ class TestEmailService:
             assert "\r" not in sent_msg["Subject"]
             # A serialização completa não pode levantar erro de header.
             assert sent_msg.as_bytes()
+
+    def test_send_reply_uses_resend_when_key_set(self, mock_env):
+        """Com RESEND_API_KEY configurada, o envio vai pela API do Resend
+        (HTTP), com Reply-To = e-mail do cliente, sem tocar no SMTP."""
+        env = {
+            'EMAIL_USER': 'cliente-suporte@gmail.com',
+            'EMAIL_PASS': 'app_pass',
+            'RESEND_API_KEY': 're_test_123',
+            'RESEND_FROM': 'Suporte <atendimento@floatech.app>',
+        }
+        with patch.dict('os.environ', env), \
+                patch('src.core.email_service.smtplib.SMTP') as mock_smtp, \
+                patch('src.core.email_service.urllib.request.urlopen') as mock_open:
+            resp = MagicMock()
+            resp.__enter__ = MagicMock(return_value=resp)
+            resp.__exit__ = MagicMock(return_value=False)
+            resp.read.return_value = b'{"id": "abc"}'
+            mock_open.return_value = resp
+
+            from src.core.email_service import EmailService
+            service = EmailService()
+            ok = service.send_reply("final@empresa.com", "Re: Olá", "Resposta.")
+
+            assert ok is True
+            mock_smtp.assert_not_called()  # não usou SMTP
+            sent_request = mock_open.call_args[0][0]
+            assert sent_request.full_url == "https://api.resend.com/emails"
+            assert sent_request.headers["Authorization"] == "Bearer re_test_123"
+            payload = json.loads(sent_request.data.decode("utf-8"))
+            assert payload["from"] == "Suporte <atendimento@floatech.app>"
+            assert payload["to"] == ["final@empresa.com"]
+            assert payload["reply_to"] == "cliente-suporte@gmail.com"
 
     def test_mark_as_read(self, mock_env):
         """Testa marcação de e-mail como lido."""
