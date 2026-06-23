@@ -1,9 +1,11 @@
 /* Renderização dos gráficos do painel de análise (Chart.js). */
 
-const PALETTE = ["#15c8d4", "#3b82f6", "#f59e0b", "#ef4444", "#22c55e", "#a855f7"];
+const PALETTE = ["#22d3ee", "#3b82f6", "#f59e0b", "#fb7185", "#34d399", "#a855f7"];
 
-Chart.defaults.color = "#8a98ad";
-Chart.defaults.borderColor = "#243044";
+// Cores adaptadas ao tema atual (claro/escuro).
+const css = getComputedStyle(document.documentElement);
+Chart.defaults.color = css.getPropertyValue("--muted").trim() || "#8a98ad";
+Chart.defaults.borderColor = css.getPropertyValue("--border").trim() || "#243044";
 Chart.defaults.font.family = "Inter, sans-serif";
 
 function toEntries(obj) {

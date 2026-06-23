@@ -5,25 +5,37 @@
 <header class="page-head no-print">
   <div>
     <h1>Relatório de Tickets</h1>
-    <p class="muted">Gerado em {{ generated_at }}</p>
+    <p class="sub">Gerado em {{ generated_at }}</p>
   </div>
   <div class="head-actions">
-    <a class="btn ghost" href="/api/report.csv">Baixar CSV</a>
-    <a class="btn ghost" href="/api/report.json">Baixar JSON</a>
-    <button class="btn primary" onclick="window.print()">🖨 Imprimir / PDF</button>
+    <a class="btn ghost" href="/api/report.csv"><svg class="ico sm"><use href="#i-download"/></svg> CSV</a>
+    <a class="btn ghost" href="/api/report.json"><svg class="ico sm"><use href="#i-download"/></svg> JSON</a>
+    <button class="btn primary" onclick="window.print()"><svg class="ico sm"><use href="#i-print"/></svg> Imprimir / PDF</button>
   </div>
 </header>
 
 <div class="report-head">
-  <h2>{{ company }} · SupportFlow AI</h2>
-  <p>Relatório de atendimento — {{ generated_at }}</p>
+  <h2>{{ company }} · {{ app_name }}</h2>
+  <p class="muted">Relatório de atendimento — {{ generated_at }}</p>
 </div>
 
 <section class="kpi-grid">
-  <div class="kpi"><span class="kpi-val">{{ summary.total }}</span><span class="kpi-lbl">Total</span></div>
-  <div class="kpi danger"><span class="kpi-val">{{ summary.urgentes }}</span><span class="kpi-lbl">Urgentes</span></div>
-  <div class="kpi warn"><span class="kpi-val">{{ summary.pendentes }}</span><span class="kpi-lbl">Pendentes</span></div>
-  <div class="kpi ok"><span class="kpi-val">{{ summary.resolvidos }}</span><span class="kpi-lbl">Resolvidos</span></div>
+  <div class="kpi">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-inbox"/></svg></div>
+    <div><div class="kpi-val">{{ summary.total }}</div><div class="kpi-lbl">Total</div></div>
+  </div>
+  <div class="kpi danger">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-alert"/></svg></div>
+    <div><div class="kpi-val">{{ summary.urgentes }}</div><div class="kpi-lbl">Urgentes</div></div>
+  </div>
+  <div class="kpi warn">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-clock"/></svg></div>
+    <div><div class="kpi-val">{{ summary.pendentes }}</div><div class="kpi-lbl">Pendentes</div></div>
+  </div>
+  <div class="kpi ok">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-check-circle"/></svg></div>
+    <div><div class="kpi-val">{{ summary.resolvidos }}</div><div class="kpi-lbl">Resolvidos</div></div>
+  </div>
 </section>
 
 <table class="table report-table">

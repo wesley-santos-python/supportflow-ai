@@ -5,13 +5,13 @@
 <header class="page-head">
   <div>
     <h1>Lembretes & Respostas Agendadas</h1>
-    <p class="muted">Acompanhe follow-ups e envios programados</p>
+    <p class="sub">Acompanhe follow-ups e envios programados</p>
   </div>
 </header>
 
 <section class="two-col">
   <div class="panel">
-    <h3>Novo lembrete</h3>
+    <h3><svg class="ico sm"><use href="#i-plus"/></svg> Novo lembrete</h3>
     <form id="reminderForm" class="form" onsubmit="return createReminder(event)">
       <label>Título
         <input name="title" required placeholder="Ex.: Retornar cliente X" />
@@ -27,7 +27,7 @@
   </div>
 
   <div class="panel">
-    <h3>Lembretes</h3>
+    <h3><svg class="ico sm"><use href="#i-bell"/></svg> Lembretes</h3>
     <ul class="list">
       {% for r in reminders %}
       <li class="list-item {{ 'done' if r.done }}">
@@ -38,9 +38,9 @@
         </div>
         <div class="list-actions">
           {% if not r.done %}
-          <button class="btn tiny ok" onclick="completeReminder({{ r.id }})">✓</button>
+          <button class="btn tiny ok" onclick="completeReminder({{ r.id }})" title="Concluir"><svg class="ico sm"><use href="#i-check"/></svg></button>
           {% endif %}
-          <button class="btn tiny ghost" onclick="deleteReminder({{ r.id }})">✕</button>
+          <button class="btn tiny ghost" onclick="deleteReminder({{ r.id }})" title="Remover"><svg class="ico sm"><use href="#i-trash"/></svg></button>
         </div>
       </li>
       {% else %}
@@ -51,7 +51,7 @@
 </section>
 
 <div class="panel">
-  <h3>Respostas agendadas</h3>
+  <h3><svg class="ico sm"><use href="#i-calendar"/></svg> Respostas agendadas</h3>
   <table class="table">
     <thead><tr><th>Para</th><th>Assunto</th><th>Agendado</th><th>Status</th></tr></thead>
     <tbody>

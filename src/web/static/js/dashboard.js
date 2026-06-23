@@ -43,11 +43,14 @@ function renderCards(tickets) {
         <span class="card-subject">${escapeHtml(t.subject || "(sem assunto)")}</span>
         <span class="badge ${t.urgencia}">${escapeHtml(t.urgencia || "Baixa")}</span>
       </div>
-      <span class="card-sender">${escapeHtml(t.sender || "")}</span>
+      <span class="card-sender">${icon("i-mail", "ico sm")} ${escapeHtml(t.sender || "")}</span>
       <span class="card-summary">${escapeHtml(t.resumo || "Análise pendente...")}</span>
       <div class="card-foot">
-        <span class="card-cat">📁 ${escapeHtml(t.categoria || "Outros")}</span>
-        <span>${t.has_attachments ? '<span class="dot-attach">📎</span> ' : ""}${fmtDate(t.created_at)}</span>
+        <span class="card-cat">${icon("i-folder", "ico sm")} ${escapeHtml(t.categoria || "Outros")}</span>
+        <span class="card-time">
+          ${t.has_attachments ? `<span class="attach-flag">${icon("i-clip", "ico sm")}</span>` : ""}
+          ${icon("i-clock", "ico sm")} ${fmtDate(t.created_at)}
+        </span>
       </div>`;
     container.appendChild(card);
   });
@@ -74,21 +77,21 @@ document.getElementById("catChips").addEventListener("click", (e) => {
 async function syncNow() {
   const btn = document.getElementById("syncBtn");
   btn.disabled = true;
-  btn.textContent = "⟳ Sincronizando...";
+  const original = btn.innerHTML;
+  btn.innerHTML = icon("i-refresh", "ico spin") + " Sincronizando...";
   try {
     const r = await api("/api/sync", { method: "POST" });
-    toast(`✓ ${r.processed} ticket(s) sincronizado(s)`);
+    toast(`${r.processed} ticket(s) sincronizado(s)`);
     await loadTickets();
   } catch (e) {
     toast("Erro: " + e.message, true);
   } finally {
     btn.disabled = false;
-    btn.textContent = "⟳ Sincronizar";
+    btn.innerHTML = original;
   }
 }
 
-/* ------------------------------------------------------------------ Exportar */
-function exportMenu() {
+function openReport() {
   window.open("/report", "_blank");
 }
 
@@ -97,24 +100,24 @@ async function openTicket(id) {
   try {
     activeTicket = await api("/api/tickets/" + id);
     renderModal(activeTicket);
-    document.getElementById("modal").hidden = false;
+    document.getElementById("modal").classList.add("open");
   } catch (e) {
     toast("Erro: " + e.message, true);
   }
 }
 
 function closeModal() {
-  document.getElementById("modal").hidden = true;
+  document.getElementById("modal").classList.remove("open");
   activeTicket = null;
 }
 
 function renderModal(t) {
   const attachments = (t.attachments || []).map((a) => `
     <div class="attach-item">
-      <span>📎 ${escapeHtml(a.filename)}</span>
+      <span class="name">${icon("i-clip", "ico sm")} <span>${escapeHtml(a.filename)}</span></span>
       <span class="modal-row">
-        <a class="btn tiny ghost" href="/api/attachments/${a.id}/file" target="_blank">Abrir / Imprimir</a>
-        <button class="btn tiny" onclick="downloadAttachment(${a.id})">Baixar</button>
+        <a class="btn tiny ghost" href="/api/attachments/${a.id}/file" target="_blank">${icon("i-print", "ico sm")} Abrir</a>
+        <button class="btn tiny" onclick="downloadAttachment(${a.id})">${icon("i-download", "ico sm")} Baixar</button>
       </span>
     </div>`).join("");
 
@@ -124,31 +127,31 @@ function renderModal(t) {
     <p class="muted small">De: ${escapeHtml(t.sender)} · ${escapeHtml(t.categoria)} · ${escapeHtml(t.status)}</p>
 
     <div class="field">
-      <label class="muted small">Resumo da IA</label>
+      <label>Resumo</label>
       <p>${escapeHtml(t.resumo || "—")}</p>
     </div>
 
     <div class="modal-section">
-      <label class="muted small">✍️ Resposta (sugerida pela IA — edite à vontade)</label>
+      <label class="muted small">Resposta (sugestão automática — edite à vontade)</label>
       <textarea id="replyBody" rows="6">${escapeHtml(t.resposta_sugerida || "")}</textarea>
       <div class="modal-row" style="margin-top:10px">
-        <input id="rewriteInstruction" class="search" placeholder="Reescrever com IA: ex. 'mais formal'" />
-        <button class="btn ghost" onclick="rewriteWithAI(${t.id})">🤖 Reescrever</button>
+        <input id="rewriteInstruction" style="flex:1" placeholder="Refinar resposta: ex. 'mais formal'" />
+        <button class="btn ghost" onclick="rewriteWithAI(${t.id})">${icon("i-ai", "ico sm")} Refinar</button>
       </div>
     </div>
 
     <div class="modal-section">
-      <label class="muted small">📎 Anexar arquivos</label>
+      <label class="muted small">Anexar arquivos</label>
       <input type="file" id="replyFiles" multiple style="margin-top:6px" />
       ${attachments ? `<div class="attach-list">${attachments}</div>` : ""}
     </div>
 
     <div class="modal-section modal-row" style="justify-content:space-between">
       <div class="modal-row">
-        <input type="datetime-local" id="scheduleAt" class="search" />
-        <button class="btn ghost" onclick="scheduleReply(${t.id})">📅 Agendar</button>
+        <input type="datetime-local" id="scheduleAt" />
+        <button class="btn ghost" onclick="scheduleReply(${t.id})">${icon("i-calendar", "ico sm")} Agendar</button>
       </div>
-      <button class="btn primary" onclick="sendReply(${t.id})">✉️ Enviar agora</button>
+      <button class="btn primary" onclick="sendReply(${t.id})">${icon("i-send", "ico sm")} Enviar agora</button>
     </div>`;
 }
 
@@ -159,14 +162,14 @@ async function rewriteWithAI(id) {
   try {
     const r = await postJSON(`/api/tickets/${id}/rewrite`, { text, instruction });
     document.getElementById("replyBody").value = r.text;
-    toast("✓ Resposta reescrita pela IA");
+    toast("Resposta atualizada");
   } catch (e) {
     toast("Erro: " + e.message, true);
   }
 }
 
 /* ------------------------------------------------------ Enviar / Agendar */
-function buildReplyForm(id) {
+function buildReplyForm() {
   const fd = new FormData();
   fd.append("body", document.getElementById("replyBody").value);
   const files = document.getElementById("replyFiles").files;
@@ -175,10 +178,10 @@ function buildReplyForm(id) {
 }
 
 async function sendReply(id) {
-  const fd = buildReplyForm(id);
+  const fd = buildReplyForm();
   try {
     await api(`/api/tickets/${id}/reply`, { method: "POST", body: fd });
-    toast("✓ Resposta enviada");
+    toast("Resposta enviada");
     closeModal();
     loadTickets();
   } catch (e) {
@@ -189,11 +192,11 @@ async function sendReply(id) {
 async function scheduleReply(id) {
   const when = document.getElementById("scheduleAt").value;
   if (!when) return toast("Escolha data/hora para agendar", true);
-  const fd = buildReplyForm(id);
+  const fd = buildReplyForm();
   fd.append("scheduled_for", when);
   try {
     await api(`/api/tickets/${id}/schedule`, { method: "POST", body: fd });
-    toast("✓ Resposta agendada");
+    toast("Resposta agendada");
     closeModal();
   } catch (e) {
     toast("Erro: " + e.message, true);
@@ -204,7 +207,7 @@ async function scheduleReply(id) {
 async function downloadAttachment(id) {
   try {
     const r = await postJSON(`/api/attachments/${id}/download`, {});
-    toast("✓ Anexo salvo: " + r.path);
+    toast("Anexo salvo: " + r.path);
   } catch (e) {
     toast("Erro: " + e.message, true);
   }
@@ -213,6 +216,9 @@ async function downloadAttachment(id) {
 /* -------------------------------------------------- Inicialização + refresh */
 document.addEventListener("DOMContentLoaded", () => {
   loadTickets();
-  // Atualização automática a cada 2 minutos (alinhado ao scheduler).
+  document.getElementById("modal").addEventListener("click", (e) => {
+    if (e.target.id === "modal") closeModal();
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
   setInterval(loadTickets, 120000);
 });

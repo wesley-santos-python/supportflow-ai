@@ -5,32 +5,44 @@
 <header class="page-head">
   <div>
     <h1>Painel de Análise</h1>
-    <p class="muted">Visão geral dos tipos de e-mail recebidos</p>
+    <p class="sub">Visão geral dos tipos de e-mail recebidos</p>
   </div>
 </header>
 
 <section class="kpi-grid">
-  <div class="kpi"><span class="kpi-val">{{ summary.total }}</span><span class="kpi-lbl">Total</span></div>
-  <div class="kpi danger"><span class="kpi-val">{{ summary.urgentes }}</span><span class="kpi-lbl">Urgentes</span></div>
-  <div class="kpi warn"><span class="kpi-val">{{ summary.pendentes }}</span><span class="kpi-lbl">Pendentes</span></div>
-  <div class="kpi ok"><span class="kpi-val">{{ summary.resolvidos }}</span><span class="kpi-lbl">Resolvidos</span></div>
+  <div class="kpi">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-inbox"/></svg></div>
+    <div><div class="kpi-val">{{ summary.total }}</div><div class="kpi-lbl">Total</div></div>
+  </div>
+  <div class="kpi danger">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-alert"/></svg></div>
+    <div><div class="kpi-val">{{ summary.urgentes }}</div><div class="kpi-lbl">Urgentes</div></div>
+  </div>
+  <div class="kpi warn">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-clock"/></svg></div>
+    <div><div class="kpi-val">{{ summary.pendentes }}</div><div class="kpi-lbl">Pendentes</div></div>
+  </div>
+  <div class="kpi ok">
+    <div class="kpi-ico"><svg class="ico"><use href="#i-check-circle"/></svg></div>
+    <div><div class="kpi-val">{{ summary.resolvidos }}</div><div class="kpi-lbl">Resolvidos</div></div>
+  </div>
 </section>
 
 <section class="charts">
   <div class="panel">
-    <h3>Por categoria</h3>
+    <h3><svg class="ico sm"><use href="#i-folder"/></svg> Por categoria</h3>
     <canvas id="catChart"></canvas>
   </div>
   <div class="panel">
-    <h3>Por urgência</h3>
+    <h3><svg class="ico sm"><use href="#i-alert"/></svg> Por urgência</h3>
     <canvas id="urgChart"></canvas>
   </div>
   <div class="panel">
-    <h3>Por status</h3>
+    <h3><svg class="ico sm"><use href="#i-check-circle"/></svg> Por status</h3>
     <canvas id="statusChart"></canvas>
   </div>
   <div class="panel wide">
-    <h3>Volume por dia</h3>
+    <h3><svg class="ico sm"><use href="#i-chart"/></svg> Volume por dia</h3>
     <canvas id="dayChart"></canvas>
   </div>
 </section>

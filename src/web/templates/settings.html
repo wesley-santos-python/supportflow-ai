@@ -5,13 +5,13 @@
 <header class="page-head">
   <div>
     <h1>Configurações</h1>
-    <p class="muted">Conecte seu e-mail para o sistema começar a processar seus tickets</p>
+    <p class="sub">Conecte seu e-mail para o sistema começar a processar seus tickets</p>
   </div>
 </header>
 
 <form id="settingsForm" class="settings-grid" onsubmit="return saveSettings(event)">
   <div class="panel">
-    <h3>📧 Conexão de e-mail</h3>
+    <h3><svg class="ico sm"><use href="#i-mail"/></svg> Conexão de e-mail</h3>
     <label>Provedor
       <select name="email_provider">
         {% for p in providers %}
@@ -44,7 +44,7 @@
   </div>
 
   <div class="panel">
-    <h3>📱 WhatsApp (resumo de urgentes)</h3>
+    <h3><svg class="ico sm"><use href="#i-bell"/></svg> WhatsApp (resumo de urgentes)</h3>
     <p class="muted small">Receba no seu WhatsApp um resumo dos e-mails urgentes.</p>
     <label class="switch">
       <input type="checkbox" name="whatsapp_enabled" {{ 'checked' if settings.WHATSAPP_ENABLED == 'true' }} />
@@ -59,10 +59,11 @@
   </div>
 
   <div class="panel">
-    <h3>🤖 Inteligência Artificial</h3>
+    <h3><svg class="ico sm"><use href="#i-shield"/></svg> Inteligência Artificial</h3>
     <p class="muted small">
-      A análise é feita com <strong>Gemini 3.1 Flash Lite</strong>, fornecido pela
-      plataforma. Você não precisa configurar nada — basta conectar seu e-mail.
+      A análise e a geração de respostas são feitas por IA fornecida pela
+      plataforma. Você não precisa configurar nada — basta conectar seu e-mail
+      e o sistema cuida do resto.
     </p>
   </div>
 

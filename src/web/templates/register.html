@@ -4,22 +4,37 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Criar conta · {{ app_name }}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;750&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (!t) t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    })();
+  </script>
 </head>
 <body class="auth-body">
+  {% include "_icons.svg" %}
+  <button class="icon-btn theme-toggle auth-top" onclick="toggleTheme()" title="Alternar tema">
+    <svg class="ico sm icon-sun"><use href="#i-sun"/></svg>
+    <svg class="ico sm icon-moon"><use href="#i-moon"/></svg>
+  </button>
+
   <div class="auth-card">
     <div class="auth-brand">
-      <div class="brand-logo">◇</div>
-      <div>
-        <div class="brand-name">{{ app_name }}</div>
-        <div class="brand-by">by {{ company_name }}</div>
+      <svg class="brand-logo" viewBox="0 0 40 40"><use href="#logo-floatech"/></svg>
+      <div class="brand-text">
+        <span class="brand-name">{{ app_name }}</span>
+        <span class="brand-by">by <b>{{ company_name }}</b></span>
       </div>
     </div>
     <h1>Criar conta</h1>
     <p class="muted small">Comece a gerir seus e-mails de suporte com IA</p>
 
-    {% if erro %}<div class="auth-error">{{ erro }}</div>{% endif %}
+    {% if erro %}<div class="auth-error"><svg class="ico sm"><use href="#i-alert"/></svg> {{ erro }}</div>{% endif %}
 
     <form method="post" action="/register" class="auth-form">
       <label>Nome
@@ -36,5 +51,6 @@
 
     <p class="auth-foot">Já tem conta? <a href="/login">Entrar</a></p>
   </div>
+  <script src="/static/js/app.js"></script>
 </body>
 </html>

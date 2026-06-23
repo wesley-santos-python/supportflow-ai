@@ -5,36 +5,50 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}{{ app_name }}{% endblock %} · {{ company_name }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;550;600;650;700;750&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="/static/css/style.css" />
+  <!-- Define o tema antes do render para evitar flash -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("theme");
+        if (!t) t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
+    })();
+  </script>
   {% block head %}{% endblock %}
 </head>
 <body>
+  {% include "_icons.svg" %}
+
   <div class="layout">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-logo">◇</div>
-        <div>
-          <div class="brand-name">{{ app_name }}</div>
-          <div class="brand-by">by {{ company_name }}</div>
+        <svg class="brand-logo" viewBox="0 0 40 40" aria-hidden="true"><use href="#logo-floatech"/></svg>
+        <div class="brand-text">
+          <span class="brand-name">{{ app_name }}</span>
+          <span class="brand-by">by <b>{{ company_name }}</b></span>
         </div>
       </div>
 
       <nav class="nav">
+        <span class="nav-label">Menu</span>
         <a href="/" class="nav-item {{ 'active' if active == 'dashboard' }}">
-          <span class="nav-ico">▣</span> Dashboard
+          <svg class="ico"><use href="#i-grid"/></svg> Dashboard
         </a>
         <a href="/analytics" class="nav-item {{ 'active' if active == 'analytics' }}">
-          <span class="nav-ico">◔</span> Análises
+          <svg class="ico"><use href="#i-chart"/></svg> Análises
         </a>
         <a href="/reminders" class="nav-item {{ 'active' if active == 'reminders' }}">
-          <span class="nav-ico">⏰</span> Lembretes & Agenda
+          <svg class="ico"><use href="#i-bell"/></svg> Lembretes & Agenda
         </a>
         <a href="/report" class="nav-item {{ 'active' if active == 'report' }}">
-          <span class="nav-ico">▤</span> Relatórios
+          <svg class="ico"><use href="#i-doc"/></svg> Relatórios
         </a>
+        <span class="nav-label">Conta</span>
         <a href="/settings" class="nav-item {{ 'active' if active == 'settings' }}">
-          <span class="nav-ico">⚙</span> Configurações
+          <svg class="ico"><use href="#i-cog"/></svg> Configurações
         </a>
       </nav>
 
@@ -46,11 +60,16 @@
             <div class="user-name">{{ user.name }}</div>
             <div class="user-email">{{ user.email }}</div>
           </div>
-          <a href="/logout" class="logout" title="Sair">⎋</a>
+          <a href="/logout" class="icon-btn" title="Sair"><svg class="ico sm"><use href="#i-logout"/></svg></a>
         </div>
         {% endif %}
-        <div class="badge-ai">⚡ Gemini 3.1 Flash Lite</div>
-        <div class="copyright">© 2026 {{ company_name }}</div>
+        <div class="foot-row">
+          <span class="foot-copy">© 2026 {{ company_name }}</span>
+          <button class="icon-btn theme-toggle" onclick="toggleTheme()" title="Alternar tema" aria-label="Alternar tema">
+            <svg class="ico sm icon-sun"><use href="#i-sun"/></svg>
+            <svg class="ico sm icon-moon"><use href="#i-moon"/></svg>
+          </button>
+        </div>
       </div>
     </aside>
 
