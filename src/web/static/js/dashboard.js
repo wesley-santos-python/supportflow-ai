@@ -2,6 +2,7 @@
 
 const STATUSES = ["Pendente", "Em Andamento", "Resolvido"];
 let currentFilters = { categoria: "Todos", urgencia: "Todos", status: "Todos", search: "", sender: "" };
+let currentPage = 1;
 let activeTicket = null;
 
 /* Ícone de risco por nível de urgência (cor vem da classe .badge). */
@@ -22,14 +23,46 @@ async function loadTickets() {
   Object.entries(currentFilters).forEach(([k, v]) => {
     if (v && v !== "Todos") params.set(k, v);
   });
+  params.set("page", currentPage);
 
   try {
     const data = await api("/api/tickets?" + params.toString());
     renderCards(data.tickets);
+    renderPager(data);
     refreshSummary();
   } catch (e) {
     toast("Erro ao carregar: " + e.message, true);
   }
+}
+
+/* Reinicia para a 1ª página (ao trocar filtro/busca) e recarrega. */
+function resetAndLoad() {
+  currentPage = 1;
+  loadTickets();
+}
+
+function gotoPage(p) {
+  currentPage = p;
+  loadTickets();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* Controles de paginação (50 por página). */
+function renderPager(data) {
+  const pager = document.getElementById("pager");
+  if (!pager) return;
+  const pages = data.pages || 1;
+  if (pages <= 1) {
+    pager.hidden = true;
+    pager.innerHTML = "";
+    return;
+  }
+  const p = data.page || 1;
+  pager.hidden = false;
+  pager.innerHTML = `
+    <button class="btn tiny ghost" ${p <= 1 ? "disabled" : ""} onclick="gotoPage(${p - 1})">‹ Anterior</button>
+    <span class="muted small">Página ${p} de ${pages} · ${data.total} tickets</span>
+    <button class="btn tiny ghost" ${p >= pages ? "disabled" : ""} onclick="gotoPage(${p + 1})">Próxima ›</button>`;
 }
 
 /* Atualiza os KPIs (Total/Urgentes/Pendentes/Resolvidos) sem recarregar a página. */
@@ -54,7 +87,7 @@ function clearClient() {
   currentFilters.sender = "";
   showClientTag();
   history.replaceState(null, "", location.pathname);  // tira ?sender= da URL
-  loadTickets();
+  resetAndLoad();
 }
 
 function showClientTag() {
@@ -69,7 +102,7 @@ function showClientTag() {
 let _debounce;
 function debouncedLoad() {
   clearTimeout(_debounce);
-  _debounce = setTimeout(loadTickets, 300);
+  _debounce = setTimeout(resetAndLoad, 300);
 }
 
 function renderCards(tickets) {
@@ -117,7 +150,7 @@ document.getElementById("catChips").addEventListener("click", (e) => {
   document.querySelectorAll("#catChips .chip").forEach((c) => c.classList.remove("active"));
   chip.classList.add("active");
   currentFilters.categoria = chip.dataset.val;
-  loadTickets();
+  resetAndLoad();
 });
 
 /* ----------------------------------------------------------- Sincronização */
@@ -141,6 +174,22 @@ async function syncNow() {
 
 function openReport() {
   window.open("/report", "_blank");
+}
+
+/* Apaga TODOS os tickets (limpa o acúmulo). Os e-mails já lidos não voltam;
+   só os novos (não lidos dos últimos 7 dias) entram nas próximas sincronizações. */
+async function clearAllTickets() {
+  if (!confirm("Apagar TODOS os tickets atuais?\n\nOs e-mails já lidos NÃO voltam — só entram os novos. Esta ação não pode ser desfeita.")) {
+    return;
+  }
+  try {
+    const r = await api("/api/tickets/clear", { method: "POST" });
+    toast(`${r.deleted} ticket(s) removido(s)`);
+    currentPage = 1;
+    loadTickets();
+  } catch (e) {
+    toast("Erro: " + e.message, true);
+  }
 }
 
 /* --------------------------------------------------------------------- Modal */

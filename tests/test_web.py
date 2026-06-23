@@ -98,7 +98,9 @@ class TestWebApi:
     """Endpoints de API autenticados."""
 
     def test_list_tickets_empty(self, client):
-        assert client.get("/api/tickets").json() == {"tickets": []}
+        data = client.get("/api/tickets").json()
+        assert data["tickets"] == []
+        assert data["page"] == 1 and data["pages"] == 1 and data["total"] == 0
 
     def test_analytics(self, client):
         assert client.get("/api/analytics").json()["total"] == 0
@@ -222,6 +224,18 @@ class TestTicketActions:
         t = client.get(f"/api/tickets/{tid}").json()
         assert t["created_at"].endswith("Z")
         assert t["body_html"] == "<b>oi</b>"
+
+    def test_clear_all_tickets(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        db.save_ticket({"user_id": user.id, "uid": "c1", "sender": "x@x.com", "subject": "A"})
+        db.save_ticket({"user_id": user.id, "uid": "c2", "sender": "x@x.com", "subject": "B"})
+
+        resp = client.post("/api/tickets/clear")
+        assert resp.status_code == 200
+        assert resp.json()["deleted"] == 2
+        assert client.get("/api/tickets").json()["tickets"] == []
 
     def test_enviados_only_answered(self, client):
         """A guia Enviados mostra só os tickets já respondidos."""

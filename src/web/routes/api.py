@@ -104,6 +104,16 @@ def sync_now(user: User = Depends(require_api_user)):
     return {"processed": processed}
 
 
+@router.post("/tickets/clear")
+def clear_tickets(user: User = Depends(require_api_user)):
+    """Apaga todos os tickets do cliente (recomeço limpo). Não toca em login/config."""
+    deleted = db.delete_all_tickets(user.id)
+    return {"ok": True, "deleted": deleted}
+
+
+_PAGE_SIZE = 50
+
+
 @router.get("/tickets")
 def list_tickets(
     categoria: Optional[str] = None,
@@ -111,11 +121,23 @@ def list_tickets(
     status: Optional[str] = None,
     search: Optional[str] = None,
     sender: Optional[str] = None,
+    page: int = 1,
     user: User = Depends(require_api_user),
 ):
-    """Lista os tickets do cliente aplicando filtros opcionais."""
-    tickets = db.query_tickets(user.id, categoria, urgencia, status, search, sender)
-    return {"tickets": [t.to_dict() for t in tickets]}
+    """Lista uma página (50) de tickets do cliente aplicando filtros opcionais."""
+    page = max(1, page)
+    offset = (page - 1) * _PAGE_SIZE
+    tickets = db.query_tickets(
+        user.id, categoria, urgencia, status, search, sender, limit=_PAGE_SIZE, offset=offset
+    )
+    total = db.count_tickets(user.id, categoria, urgencia, status, search, sender)
+    pages = max(1, (total + _PAGE_SIZE - 1) // _PAGE_SIZE)
+    return {
+        "tickets": [t.to_dict() for t in tickets],
+        "page": page,
+        "pages": pages,
+        "total": total,
+    }
 
 
 @router.get("/senders")

@@ -256,6 +256,26 @@ def save_ticket(ticket_data: dict) -> Optional[int]:
         db.close()
 
 
+def _apply_ticket_filters(query, categoria, urgencia, status, search, sender):
+    """Aplica os filtros de listagem de tickets (reusado em listar e contar)."""
+    if sender and sender != "Todos":
+        query = query.filter(Ticket.sender == sender)
+    if categoria and categoria != "Todos":
+        query = query.filter(Ticket.categoria == categoria)
+    if urgencia and urgencia != "Todos":
+        query = query.filter(Ticket.urgencia == urgencia)
+    if status and status != "Todos":
+        query = query.filter(Ticket.status == status)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            Ticket.subject.ilike(like)
+            | Ticket.sender.ilike(like)
+            | Ticket.resumo.ilike(like)
+        )
+    return query
+
+
 def query_tickets(
     user_id: Optional[int] = None,
     categoria: Optional[str] = None,
@@ -263,35 +283,41 @@ def query_tickets(
     status: Optional[str] = None,
     search: Optional[str] = None,
     sender: Optional[str] = None,
-    limit: int = 200,
+    limit: int = 50,
+    offset: int = 0,
 ) -> List[Ticket]:
-    """Consulta tickets do usuário aplicando filtros opcionais (limitado a ``limit``)."""
+    """Consulta uma página de tickets do usuário aplicando filtros opcionais."""
     db = SessionLocal()
     try:
-        query = db.query(Ticket).options(selectinload(Ticket.attachments))
-        if user_id is not None:
-            query = query.filter(Ticket.user_id == user_id)
-        if sender and sender != "Todos":
-            query = query.filter(Ticket.sender == sender)
-        if categoria and categoria != "Todos":
-            query = query.filter(Ticket.categoria == categoria)
-        if urgencia and urgencia != "Todos":
-            query = query.filter(Ticket.urgencia == urgencia)
-        if status and status != "Todos":
-            query = query.filter(Ticket.status == status)
-        if search:
-            like = f"%{search}%"
-            query = query.filter(
-                Ticket.subject.ilike(like)
-                | Ticket.sender.ilike(like)
-                | Ticket.resumo.ilike(like)
-            )
+        query = _scoped(
+            db.query(Ticket).options(selectinload(Ticket.attachments)), Ticket, user_id
+        )
+        query = _apply_ticket_filters(query, categoria, urgencia, status, search, sender)
         # Abertos antes de resolvidos; dentro de cada grupo, urgência e recência.
         return (
             query.order_by(_STATUS_ORDER, _URGENCY_ORDER, Ticket.created_at.desc())
             .limit(max(1, limit))
+            .offset(max(0, offset))
             .all()
         )
+    finally:
+        db.close()
+
+
+def count_tickets(
+    user_id: Optional[int] = None,
+    categoria: Optional[str] = None,
+    urgencia: Optional[str] = None,
+    status: Optional[str] = None,
+    search: Optional[str] = None,
+    sender: Optional[str] = None,
+) -> int:
+    """Total de tickets que casam com os filtros (para a paginação)."""
+    db = SessionLocal()
+    try:
+        query = _scoped(db.query(func.count(Ticket.id)), Ticket, user_id)
+        query = _apply_ticket_filters(query, categoria, urgencia, status, search, sender)
+        return query.scalar() or 0
     finally:
         db.close()
 
@@ -368,6 +394,26 @@ def get_ticket_by_id(ticket_id: int, user_id: Optional[int] = None) -> Optional[
         if user_id is not None:
             query = query.filter(Ticket.user_id == user_id)
         return query.first()
+    finally:
+        db.close()
+
+
+def delete_all_tickets(user_id: int) -> int:
+    """Apaga todos os tickets (e anexos) de um cliente. Retorna quantos foram."""
+    db = SessionLocal()
+    try:
+        ids = [row[0] for row in db.query(Ticket.id).filter(Ticket.user_id == user_id).all()]
+        if not ids:
+            return 0
+        db.query(Attachment).filter(Attachment.ticket_id.in_(ids)).delete(synchronize_session=False)
+        deleted = db.query(Ticket).filter(Ticket.user_id == user_id).delete(synchronize_session=False)
+        db.commit()
+        logger.info(f"Tickets apagados (user={user_id}): {deleted}")
+        return deleted
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao apagar tickets: {e}")
+        return 0
     finally:
         db.close()
 

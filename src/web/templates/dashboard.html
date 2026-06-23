@@ -8,6 +8,7 @@
     <p class="sub">Classificados e priorizados automaticamente</p>
   </div>
   <div class="head-actions">
+    <button class="btn danger" onclick="clearAllTickets()"><svg class="ico sm"><use href="#i-trash"/></svg> Limpar</button>
     <button class="btn ghost" onclick="openReport()"><svg class="ico sm"><use href="#i-export"/></svg> Exportar</button>
     <button class="btn primary" id="syncBtn" onclick="syncNow()"><svg class="ico sm"><use href="#i-refresh"/></svg> Sincronizar</button>
   </div>
@@ -52,13 +53,13 @@
     <button class="chip" data-val="Logística">Logística</button>
     <button class="chip" data-val="Outros">Outros</button>
   </div>
-  <select id="urgFilter" onchange="loadTickets()">
+  <select id="urgFilter" onchange="resetAndLoad()">
     <option value="Todos">Toda urgência</option>
     <option value="Alta">Alta</option>
     <option value="Média">Média</option>
     <option value="Baixa">Baixa</option>
   </select>
-  <select id="statusFilter" onchange="loadTickets()">
+  <select id="statusFilter" onchange="resetAndLoad()">
     <option value="Todos">Todo status</option>
     <option value="Pendente">Pendente</option>
     <option value="Em Andamento">Em Andamento</option>
@@ -76,6 +77,8 @@
   <svg class="ico"><use href="#i-inbox"/></svg>
   <p>Nenhum ticket encontrado.</p>
 </div>
+
+<div id="pager" class="pager" hidden></div>
 
 <!-- Modal de detalhes/resposta (base: fechado; abre via classe .open) -->
 <div id="modal" class="modal">

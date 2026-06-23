@@ -58,16 +58,12 @@ class SupportController:
         """
         logger.info(f"Sincronizando e-mails (user={self.user_id})...")
 
-        # Na 1ª sincronização, traz só os não lidos da última semana (evita
-        # analisar um backlog enorme). Depois, todos os não lidos normalmente.
-        initial_done = self.cfg.get_bool("INITIAL_SYNC_DONE", False)
-        since_days = None if initial_done else 7
-
+        # Sincroniza sempre apenas os não lidos dos ÚLTIMOS 7 DIAS (não varre
+        # backlog antigo). Como os processados são marcados como lidos, na
+        # prática só os e-mails novos entram a cada ciclo.
         # Propaga EmailConnectionError para a UI mostrar o motivo real
         # (senha de app incorreta, servidor errado, etc.) em vez de "0 tickets".
-        new_emails = self.email_api.fetch_unread_emails(since_days=since_days)
-        if not initial_done:
-            self.cfg.set("INITIAL_SYNC_DONE", "true")
+        new_emails = self.email_api.fetch_unread_emails(since_days=7)
         if not new_emails:
             return 0
 
