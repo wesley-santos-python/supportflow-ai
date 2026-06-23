@@ -130,6 +130,19 @@ def anexos(request: Request):
     )
 
 
+@router.get("/enviados", response_class=HTMLResponse)
+def enviados(request: Request):
+    """Guia de e-mails já respondidos/enviados."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return _templates().TemplateResponse(
+        request,
+        "enviados.html",
+        {"user": user.to_dict(), "active": "enviados", "tickets": db.list_answered_tickets(user.id)},
+    )
+
+
 @router.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     """Página de configurações do cliente (conexão de e-mail, WhatsApp...)."""

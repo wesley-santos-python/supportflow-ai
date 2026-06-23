@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Enviados{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>E-mails enviados</h1>
+    <p class="sub">Tickets que você já respondeu · {{ tickets|length }} no total</p>
+  </div>
+</header>
+
+{% if tickets %}
+<div class="panel">
+  <table class="table">
+    <thead>
+      <tr><th>Para</th><th>Assunto</th><th>Categoria</th><th>Urgência</th><th>Respondido em</th></tr>
+    </thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr>
+        <td>{{ t.sender }}</td>
+        <td>{{ t.subject or '(sem assunto)' }}</td>
+        <td>{{ t.categoria }}</td>
+        <td><span class="tag urg-{{ t.urgencia }}">{{ t.urgencia }}</span></td>
+        <td class="muted small">{{ t.responded_at | brt }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <svg class="ico"><use href="#i-send"/></svg>
+  <p>Nenhum e-mail respondido ainda. As respostas que você enviar aparecem aqui.</p>
+</div>
+{% endif %}
+{% endblock %}

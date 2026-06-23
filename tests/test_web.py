@@ -89,7 +89,7 @@ class TestAuthFlow:
 class TestWebPages:
     """Páginas HTML autenticadas devem responder 200."""
 
-    @pytest.mark.parametrize("path", ["/", "/analytics", "/clientes", "/reminders", "/anexos", "/settings", "/report"])
+    @pytest.mark.parametrize("path", ["/", "/analytics", "/clientes", "/reminders", "/enviados", "/anexos", "/settings", "/report"])
     def test_pages_render(self, client, path):
         assert client.get(path).status_code == 200
 
@@ -222,6 +222,23 @@ class TestTicketActions:
         t = client.get(f"/api/tickets/{tid}").json()
         assert t["created_at"].endswith("Z")
         assert t["body_html"] == "<b>oi</b>"
+
+    def test_enviados_only_answered(self, client):
+        """A guia Enviados mostra só os tickets já respondidos."""
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        respondido = db.save_ticket({"user_id": user.id, "uid": "90", "sender": "ok@x.com", "subject": "Respondido"})
+        db.save_ticket({"user_id": user.id, "uid": "91", "sender": "no@x.com", "subject": "Pendente"})
+        db.mark_ticket_responded(respondido, user.id)
+
+        answered = db.list_answered_tickets(user.id)
+        assert [t.subject for t in answered] == ["Respondido"]
+
+        page = client.get("/enviados")
+        assert page.status_code == 200
+        assert "ok@x.com" in page.text
+        assert "no@x.com" not in page.text
 
     def test_reanalyze_updates_classification(self, client):
         """Reanalisar reprocessa o ticket com a IA e atualiza a classificação."""

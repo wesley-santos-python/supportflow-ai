@@ -303,6 +303,18 @@ def get_all_tickets(user_id: Optional[int] = None) -> List[Ticket]:
         db.close()
 
 
+def list_answered_tickets(user_id: Optional[int] = None) -> List[Ticket]:
+    """Tickets já respondidos (resposta enviada), do mais recente ao mais antigo."""
+    db = SessionLocal()
+    try:
+        query = db.query(Ticket).filter(Ticket.response_sent.is_(True))
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
+        return query.order_by(Ticket.responded_at.desc()).all()
+    finally:
+        db.close()
+
+
 def list_senders(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
     """
     Lista os remetentes (cada e-mail é tratado como um "cliente") com a
