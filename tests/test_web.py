@@ -305,3 +305,26 @@ class TestBrandingAndPreview:
         resp = client.post("/api/email/preview", json={"email_format": "plain"})
         assert resp.json()["format"] == "plain"
         assert resp.json()["text"]
+
+    def test_email_preview_uses_accent_color(self, client):
+        resp = client.post("/api/email/preview", json={
+            "email_template": "moderno", "email_accent": "#FF6600",
+        })
+        assert "#FF6600" in resp.json()["html"]
+
+    def test_logo_upload_and_serve(self, client):
+        from src.data import db
+
+        png = b"\x89PNG\r\n\x1a\n" + b"0" * 64
+        up = client.post("/api/logo", files={"file": ("logo.png", png, "image/png")})
+        assert up.status_code == 200
+        assert "/logo/" in up.json()["url"]
+
+        uid = db.get_user_by_email("a@test.com").id
+        served = client.get(f"/logo/{uid}")
+        assert served.status_code == 200
+        assert served.headers["content-type"].startswith("image/")
+
+    def test_logo_upload_rejects_non_image(self, client):
+        resp = client.post("/api/logo", files={"file": ("x.txt", b"hello", "text/plain")})
+        assert resp.status_code == 400

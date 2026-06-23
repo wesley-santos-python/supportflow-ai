@@ -4,8 +4,8 @@ Roteador de páginas HTML (renderização server-side com Jinja2).
 Todas as páginas exigem autenticação; visitantes são redirecionados ao login.
 Os dados são sempre escopados ao cliente logado.
 """
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from src.data import db
 from src.user_config import UserConfig
@@ -64,6 +64,22 @@ def clientes(request: Request):
         request,
         "clientes.html",
         {"user": user.to_dict(), "active": "clientes", "clientes": db.list_senders(user.id)},
+    )
+
+
+@router.get("/logo/{user_id}")
+def serve_logo(user_id: int):
+    """Serve a logo enviada pelo cliente (público — usado dentro do e-mail)."""
+    import base64
+
+    data = db.get_user_setting(user_id, "COMPANY_LOGO_DATA")
+    if not data:
+        raise HTTPException(status_code=404, detail="Sem logo")
+    ctype = db.get_user_setting(user_id, "COMPANY_LOGO_TYPE") or "image/png"
+    return Response(
+        content=base64.b64decode(data),
+        media_type=ctype,
+        headers={"Cache-Control": "public, max-age=3600"},
     )
 
 

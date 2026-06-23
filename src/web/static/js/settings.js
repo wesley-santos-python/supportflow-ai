@@ -12,6 +12,7 @@ function brandingFields(form) {
     urgency_criteria: val(form, "urgency_criteria"),
     email_format: val(form, "email_format"),
     email_template: val(form, "email_template"),
+    email_accent: val(form, "email_accent"),
     email_header: val(form, "email_header"),
     company_name: val(form, "company_name"),
     company_logo_url: val(form, "company_logo_url"),
@@ -67,6 +68,23 @@ async function testEmail() {
     toast("✓ " + (r.message || "Conexão bem-sucedida!"));
   } catch (e) {
     toast("Conexão falhou: " + e.message, true);
+  }
+}
+
+/** Envia um arquivo de logo, recebe a URL pública e atualiza o campo + a prévia. */
+async function uploadLogo() {
+  const input = document.getElementById("logoFile");
+  if (!input.files || !input.files.length) return;
+  const fd = new FormData();
+  fd.append("file", input.files[0]);
+  toast("Enviando logo...");
+  try {
+    const r = await api("/api/logo", { method: "POST", body: fd });
+    document.getElementById("settingsForm").company_logo_url.value = r.url;
+    toast("✓ Logo enviada");
+    previewEmail();
+  } catch (e) {
+    toast("Erro ao enviar logo: " + e.message, true);
   }
 }
 

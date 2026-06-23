@@ -117,12 +117,9 @@ class SupportController:
             return False
 
         subject = f"Re: {ticket.subject}" if ticket.subject else "Re: Suporte"
-        try:
-            self.email_api.send_reply(ticket.sender, subject, body, attachments)
-        except EmailSendError as e:
-            logger.error(f"Falha ao responder ticket {ticket_id}: {e.message}")
-            return False
-
+        # Deixa EmailSendError propagar para a UI mostrar o motivo real
+        # (ex.: senha de app incorreta) em vez de uma falha genérica.
+        self.email_api.send_reply(ticket.sender, subject, body, attachments)
         db.mark_ticket_responded(ticket_id, self.user_id)
         return True
 

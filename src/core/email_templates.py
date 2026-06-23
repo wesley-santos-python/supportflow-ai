@@ -20,9 +20,9 @@ _LINE = "#e6e0d2"
 
 # Chaves de marca lidas da configuração do cliente.
 _BRANDING_KEYS = (
-    "EMAIL_FORMAT", "EMAIL_TEMPLATE", "EMAIL_HEADER", "COMPANY_NAME",
-    "COMPANY_LOGO_URL", "COMPANY_EMAIL", "COMPANY_PHONE", "COMPANY_SITE",
-    "COMPANY_ADDRESS",
+    "EMAIL_FORMAT", "EMAIL_TEMPLATE", "EMAIL_HEADER", "EMAIL_ACCENT",
+    "COMPANY_NAME", "COMPANY_LOGO_URL", "COMPANY_EMAIL", "COMPANY_PHONE",
+    "COMPANY_SITE", "COMPANY_ADDRESS",
 )
 
 
@@ -33,6 +33,25 @@ def branding_from_cfg(cfg) -> Dict[str, str]:
 
 def _esc(text: str) -> str:
     return html.escape(text or "")
+
+
+def _accent(b: Dict[str, str]) -> str:
+    """Cor de destaque (topo) escolhida pelo cliente, com fallback teal."""
+    color = (b.get("EMAIL_ACCENT") or "").strip()
+    return color if color.startswith("#") and len(color) in (4, 7) else _TEAL
+
+
+def _contrast(hex_color: str) -> str:
+    """Retorna texto branco ou escuro conforme a luminância da cor de fundo."""
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        r, g, bl = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except ValueError:
+        return "#ffffff"
+    luminance = (0.299 * r + 0.587 * g + 0.114 * bl) / 255
+    return "#08090A" if luminance > 0.6 else "#ffffff"
 
 
 def _logo_or_name(b: Dict[str, str], color: str) -> str:
@@ -90,13 +109,16 @@ def _wrap(content: str, bg: str = "#f3f0e8") -> str:
 
 
 def _moderno(body: str, b: Dict[str, str]) -> str:
-    header_extra = (f'<div style="color:rgba(255,255,255,.85);font-size:13px;margin-top:4px">'
+    accent = _accent(b)
+    on = _contrast(accent)
+    sub = "rgba(255,255,255,.85)" if on == "#ffffff" else "rgba(8,9,10,.7)"
+    header_extra = (f'<div style="color:{sub};font-size:13px;margin-top:4px">'
                     f'{_esc(b.get("EMAIL_HEADER"))}</div>') if b.get("EMAIL_HEADER") else ""
     return _wrap(
         f'<div style="background:#fff;border-radius:14px;overflow:hidden;'
         f'box-shadow:0 6px 24px rgba(20,22,26,.08)">'
-        f'<div style="background:{_TEAL};padding:22px 28px">'
-        f'{_logo_or_name(b, "#ffffff")}{header_extra}</div>'
+        f'<div style="background:{accent};padding:22px 28px">'
+        f'{_logo_or_name(b, on)}{header_extra}</div>'
         f'<div style="padding:28px">{_body_html(body)}</div>'
         f'<div style="padding:18px 28px;background:#fafafa;border-top:1px solid {_LINE};'
         f'font-size:12px;line-height:1.7;color:{_MUTED}">{_footer_inner(b)}</div>'
@@ -105,13 +127,14 @@ def _moderno(body: str, b: Dict[str, str]) -> str:
 
 
 def _classico(body: str, b: Dict[str, str]) -> str:
+    accent = _accent(b)
     tagline = (f'<div style="font-size:13px;color:{_MUTED};font-style:italic;margin-top:2px">'
                f'{_esc(b.get("EMAIL_HEADER"))}</div>') if b.get("EMAIL_HEADER") else ""
     return _wrap(
         f'<div style="background:#fff;padding:32px 36px;border:1px solid {_LINE};'
         f'font-family:Georgia,\'Times New Roman\',serif">'
-        f'<div style="text-align:center;padding-bottom:16px;border-bottom:2px solid {_INK}">'
-        f'{_logo_or_name(b, _INK)}{tagline}</div>'
+        f'<div style="text-align:center;padding-bottom:16px;border-bottom:3px solid {accent}">'
+        f'{_logo_or_name(b, accent)}{tagline}</div>'
         f'<div style="padding:24px 0">{_body_html(body)}</div>'
         f'<div style="padding-top:16px;border-top:1px solid {_LINE};font-size:12px;'
         f'line-height:1.7;color:{_MUTED};text-align:center">{_footer_inner(b)}</div>'
@@ -121,11 +144,12 @@ def _classico(body: str, b: Dict[str, str]) -> str:
 
 
 def _minimalista(body: str, b: Dict[str, str]) -> str:
+    accent = _accent(b)
     tagline = (f' — <span style="color:{_MUTED}">{_esc(b.get("EMAIL_HEADER"))}</span>'
                if b.get("EMAIL_HEADER") else "")
     return _wrap(
-        f'<div style="padding:8px 4px">'
-        f'<div style="margin-bottom:20px">{_logo_or_name(b, _INK)}{tagline}</div>'
+        f'<div style="padding:8px 4px;border-top:4px solid {accent}">'
+        f'<div style="margin:18px 0 20px">{_logo_or_name(b, accent)}{tagline}</div>'
         f'{_body_html(body)}'
         f'<div style="margin-top:24px;padding-top:14px;border-top:1px solid {_LINE};'
         f'font-size:12px;line-height:1.7;color:{_MUTED}">{_footer_inner(b)}</div>'

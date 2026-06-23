@@ -11,7 +11,7 @@ import os
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
@@ -22,7 +22,7 @@ from src.core.automation import SupportController
 from src.core.email_service import EmailService
 from src.data import db
 from src.data.models import ScheduledReply, User
-from src.exceptions import EmailConnectionError
+from src.exceptions import EmailConnectionError, EmailSendError
 from src.user_config import UserConfig
 from src.utils.logger import get_logger
 from src.web.auth import require_api_user
@@ -77,6 +77,7 @@ class SettingsRequest(BaseModel):
     # Marca / aparência do e-mail
     email_format: Optional[str] = None
     email_template: Optional[str] = None
+    email_accent: Optional[str] = None
     email_header: Optional[str] = None
     company_name: Optional[str] = None
     company_logo_url: Optional[str] = None
@@ -173,9 +174,13 @@ async def reply(
 ):
     """Envia uma resposta ao ticket agora, com anexos opcionais (multipart)."""
     paths = await _save_uploads(files)
-    ok = SupportController(user.id).send_ticket_reply(ticket_id, body, paths)
+    try:
+        ok = SupportController(user.id).send_ticket_reply(ticket_id, body, paths)
+    except EmailSendError as e:
+        # Mostra o motivo real (ex.: senha de app incorreta) em vez de falha genérica.
+        raise HTTPException(status_code=400, detail=e.message)
     if not ok:
-        raise HTTPException(status_code=400, detail="Falha ao enviar resposta")
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
     return {"ok": True}
 
 
@@ -310,6 +315,7 @@ def save_settings(payload: SettingsRequest, user: User = Depends(require_api_use
         "URGENCY_CRITERIA": payload.urgency_criteria,
         "EMAIL_FORMAT": payload.email_format,
         "EMAIL_TEMPLATE": payload.email_template,
+        "EMAIL_ACCENT": payload.email_accent,
         "EMAIL_HEADER": payload.email_header,
         "COMPANY_NAME": payload.company_name,
         "COMPANY_LOGO_URL": payload.company_logo_url,
@@ -336,6 +342,7 @@ class EmailPreviewRequest(BaseModel):
     body: Optional[str] = None
     email_format: Optional[str] = None
     email_template: Optional[str] = None
+    email_accent: Optional[str] = None
     email_header: Optional[str] = None
     company_name: Optional[str] = None
     company_logo_url: Optional[str] = None
@@ -357,6 +364,7 @@ def email_preview(
     overrides = {
         "EMAIL_FORMAT": payload.email_format,
         "EMAIL_TEMPLATE": payload.email_template,
+        "EMAIL_ACCENT": payload.email_accent,
         "EMAIL_HEADER": payload.email_header,
         "COMPANY_NAME": payload.company_name,
         "COMPANY_LOGO_URL": payload.company_logo_url,
@@ -376,6 +384,33 @@ def email_preview(
     if (branding.get("EMAIL_FORMAT") or "html").lower() == "plain":
         return {"format": "plain", "text": body}
     return {"format": "html", "html": render_email(body, branding)}
+
+
+@router.post("/logo")
+async def upload_logo(
+    request: Request,
+    file: UploadFile = File(...),
+    user: User = Depends(require_api_user),
+):
+    """Recebe um arquivo de logo, guarda no banco e devolve a URL pública servida."""
+    import base64
+
+    if not (file.content_type or "").startswith("image/"):
+        raise HTTPException(status_code=400, detail="Envie um arquivo de imagem (PNG, JPG, SVG...).")
+    data = await file.read()
+    if len(data) > 500_000:
+        raise HTTPException(status_code=400, detail="Logo muito grande (máximo 500 KB).")
+
+    db.set_user_setting(user.id, "COMPANY_LOGO_DATA", base64.b64encode(data).decode("ascii"))
+    db.set_user_setting(user.id, "COMPANY_LOGO_TYPE", file.content_type)
+
+    # URL absoluta (e-mail precisa de link absoluto); força https fora do local.
+    base = str(request.base_url).rstrip("/")
+    if base.startswith("http://") and not any(h in base for h in ("localhost", "127.0.0.1")):
+        base = "https://" + base[len("http://"):]
+    url = f"{base}/logo/{user.id}"
+    UserConfig(user.id).set("COMPANY_LOGO_URL", url)
+    return {"ok": True, "url": url}
 
 
 class EmailTestRequest(BaseModel):

@@ -196,7 +196,7 @@ class EmailService:
             EmailSendError: Se o envio falhar.
         """
         if not self.user or not self.password:
-            raise EmailSendError(message="Credenciais de e-mail não configuradas")
+            raise EmailSendError(message=_RESAVE_MSG)
 
         message = EmailMessage()
         message["From"] = self.user
@@ -227,7 +227,7 @@ class EmailService:
             return True
         except Exception as e:
             logger.error(f"Erro ao enviar e-mail: {e}")
-            raise EmailSendError(message="Falha ao enviar e-mail", details=str(e))
+            raise EmailSendError(message=_friendly_imap_error(e, self.smtp_server), details=str(e))
 
     # ------------------------------------------------------------------
     # Helpers internos

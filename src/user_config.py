@@ -37,6 +37,7 @@ USER_KEYS = [
     # Marca / aparência do e-mail
     "EMAIL_FORMAT",
     "EMAIL_TEMPLATE",
+    "EMAIL_ACCENT",
     "EMAIL_HEADER",
     "COMPANY_NAME",
     "COMPANY_LOGO_URL",

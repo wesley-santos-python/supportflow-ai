@@ -46,6 +46,7 @@ DEFAULTS: Dict[str, str] = {
     # Marca / aparência do e-mail enviado.
     "EMAIL_FORMAT": "html",          # "html" (bonito) ou "plain" (texto)
     "EMAIL_TEMPLATE": "moderno",     # moderno | classico | minimalista
+    "EMAIL_ACCENT": "#00B8A9",       # cor de destaque (topo do e-mail)
     "EMAIL_HEADER": "",              # frase/tagline do cabeçalho (opcional)
     "COMPANY_LOGO_URL": "",
     "COMPANY_EMAIL": "",

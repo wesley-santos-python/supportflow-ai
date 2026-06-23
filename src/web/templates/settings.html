@@ -88,14 +88,20 @@
           <option value="minimalista" {{ 'selected' if settings.EMAIL_TEMPLATE == 'minimalista' }}>Minimalista</option>
         </select>
       </label>
+      <label>Cor do topo
+        <input type="color" name="email_accent" value="{{ settings.EMAIL_ACCENT or '#00B8A9' }}" class="color-input" />
+      </label>
       <label>Nome da empresa
         <input name="company_name" value="{{ settings.COMPANY_NAME or '' }}" placeholder="Sua Empresa Ltda" />
       </label>
       <label>Cabeçalho / slogan (opcional)
         <input name="email_header" value="{{ settings.EMAIL_HEADER or '' }}" placeholder="Atendimento ao cliente" />
       </label>
-      <label>URL da logo (opcional)
+      <label>Logo — cole uma URL
         <input name="company_logo_url" value="{{ settings.COMPANY_LOGO_URL or '' }}" placeholder="https://.../logo.png" />
+      </label>
+      <label>…ou envie um arquivo
+        <input type="file" id="logoFile" accept="image/*" onchange="uploadLogo()" />
       </label>
       <label>E-mail de contato (rodapé)
         <input name="company_email" value="{{ settings.COMPANY_EMAIL or '' }}" placeholder="contato@empresa.com" />
