@@ -134,6 +134,35 @@ O SQLAlchemy cuida da criação das tabelas automaticamente.
 
 ---
 
+## ☁️ Deploy no Railway
+
+O projeto já vem pronto para o [Railway](https://railway.app) (Procfile +
+`railway.json`, bind em `0.0.0.0:$PORT` e suporte a PostgreSQL).
+
+1. **Crie o projeto** no Railway a partir deste repositório
+   (_New Project → Deploy from GitHub repo_).
+2. **Variáveis de ambiente** (aba _Variables_):
+   ```env
+   AI_API_KEY=sua-chave-gemini
+   GEMINI_MODEL=gemini-3.1-flash-lite
+   EMAIL_USER=seu-email@gmail.com
+   EMAIL_PASS=sua-senha-de-app
+   SYNC_INTERVAL_MINUTES=2
+   ```
+   > A porta é injetada automaticamente pelo Railway (`PORT`) — não defina manualmente.
+3. **Banco de dados (recomendado):** adicione um **PostgreSQL** (_New → Database_).
+   O Railway cria a variável `DATABASE_URL` automaticamente e o app a utiliza
+   (o SQLite local é efêmero em container e se perde a cada deploy).
+4. **Deploy:** o Railway detecta o Python via Nixpacks, instala o
+   `requirements.txt` e sobe com o `startCommand` do `railway.json`.
+5. Acesse a URL pública gerada e finalize a configuração em **Configurações**.
+
+> O agendador (sincronização a cada 2 min) roda no mesmo processo web — ideal
+> para uma única instância. Para múltiplas réplicas, isole o scheduler em um
+> serviço _worker_ separado.
+
+---
+
 ## 🏗️ Arquitetura
 
 ```

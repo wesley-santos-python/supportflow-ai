@@ -37,6 +37,11 @@ logger = get_logger(__name__)
 # Para trocar de banco basta exportar DATABASE_URL, ex.:
 #   postgresql://usuario:senha@servidor:5432/nome_banco
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./support_flow.db")
+
+# Provedores como Railway/Heroku expõem a URL como "postgres://", formato que
+# o SQLAlchemy 2.0 não aceita — normaliza para "postgresql://".
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 _connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=_connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

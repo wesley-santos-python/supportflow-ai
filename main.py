@@ -17,7 +17,9 @@ import uvicorn
 
 def main() -> None:
     """Inicia o servidor web do SupportFlow AI."""
-    host = os.getenv("HOST", "127.0.0.1")
+    # 0.0.0.0 é necessário em ambientes de container (Railway/Docker), que
+    # injetam a porta via variável PORT.
+    host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "8000"))
     uvicorn.run("src.web.app:app", host=host, port=port, reload=False)
 
