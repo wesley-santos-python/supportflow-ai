@@ -182,5 +182,11 @@ class SupportController:
                     "size": meta.get("size", 0),
                 }
             )
-            if auto_download and attachment_id:
+            # Só baixa arquivos de verdade (PDF, imagens nomeadas...). Evita
+            # baixar imagens de rastreio/inline de newsletters, que travam o sync.
+            if (
+                auto_download
+                and attachment_id
+                and attachment_manager.is_real_file(meta.get("filename"), meta.get("content_type"))
+            ):
                 attachment_manager.download_attachment(attachment_id, self.cfg)

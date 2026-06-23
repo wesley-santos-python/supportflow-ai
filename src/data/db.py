@@ -263,8 +263,9 @@ def query_tickets(
     status: Optional[str] = None,
     search: Optional[str] = None,
     sender: Optional[str] = None,
+    limit: int = 200,
 ) -> List[Ticket]:
-    """Consulta tickets do usuário aplicando filtros opcionais."""
+    """Consulta tickets do usuário aplicando filtros opcionais (limitado a ``limit``)."""
     db = SessionLocal()
     try:
         query = db.query(Ticket).options(selectinload(Ticket.attachments))
@@ -286,7 +287,11 @@ def query_tickets(
                 | Ticket.resumo.ilike(like)
             )
         # Abertos antes de resolvidos; dentro de cada grupo, urgência e recência.
-        return query.order_by(_STATUS_ORDER, _URGENCY_ORDER, Ticket.created_at.desc()).all()
+        return (
+            query.order_by(_STATUS_ORDER, _URGENCY_ORDER, Ticket.created_at.desc())
+            .limit(max(1, limit))
+            .all()
+        )
     finally:
         db.close()
 
