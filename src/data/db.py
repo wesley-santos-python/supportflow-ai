@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional
 
 from sqlalchemy import case, create_engine, func
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from src.data.models import (
     AppSetting,
@@ -124,7 +124,7 @@ def query_tickets(
     """
     db = SessionLocal()
     try:
-        query = db.query(Ticket)
+        query = db.query(Ticket).options(selectinload(Ticket.attachments))
         if categoria and categoria != "Todos":
             query = query.filter(Ticket.categoria == categoria)
         if urgencia and urgencia != "Todos":
@@ -147,7 +147,12 @@ def get_all_tickets() -> List[Ticket]:
     """Retorna todos os tickets ordenados do mais recente ao mais antigo."""
     db = SessionLocal()
     try:
-        return db.query(Ticket).order_by(Ticket.created_at.desc()).all()
+        return (
+            db.query(Ticket)
+            .options(selectinload(Ticket.attachments))
+            .order_by(Ticket.created_at.desc())
+            .all()
+        )
     finally:
         db.close()
 
@@ -156,7 +161,12 @@ def get_ticket_by_id(ticket_id: int) -> Optional[Ticket]:
     """Retorna um ticket específico pelo ID (ou ``None``)."""
     db = SessionLocal()
     try:
-        return db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        return (
+            db.query(Ticket)
+            .options(selectinload(Ticket.attachments))
+            .filter(Ticket.id == ticket_id)
+            .first()
+        )
     finally:
         db.close()
 
@@ -539,6 +549,7 @@ def get_urgent_tickets(limit: int = 10) -> List[Ticket]:
     try:
         return (
             db.query(Ticket)
+            .options(selectinload(Ticket.attachments))
             .filter(Ticket.urgencia == "Alta", Ticket.status != "Resolvido")
             .order_by(Ticket.created_at.desc())
             .limit(limit)
