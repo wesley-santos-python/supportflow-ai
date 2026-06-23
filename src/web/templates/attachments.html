@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Anexos{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Anexos</h1>
+    <p class="sub">Todos os arquivos recebidos nos seus tickets</p>
+  </div>
+</header>
+
+{% if attachments %}
+<div class="panel">
+  <table class="table">
+    <thead>
+      <tr><th>Arquivo</th><th>Cliente</th><th>Assunto</th><th>Tamanho</th><th>Recebido</th><th></th></tr>
+    </thead>
+    <tbody>
+      {% for a in attachments %}
+      <tr>
+        <td>
+          <span class="attach-name"><svg class="ico sm"><use href="#i-clip"/></svg> {{ a.filename }}</span>
+        </td>
+        <td class="muted">{{ a.ticket_sender or '—' }}</td>
+        <td>{{ a.ticket_subject or '—' }}</td>
+        <td class="muted">{{ (a.size / 1024)|round(1) }} KB</td>
+        <td class="muted small">{{ a.created_at[:16]|replace('T', ' ') if a.created_at }}</td>
+        <td>
+          <a class="btn tiny" href="/api/attachments/{{ a.id }}/file" target="_blank">
+            <svg class="ico sm"><use href="#i-download"/></svg> Abrir
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="empty">
+  <svg class="ico"><use href="#i-clip"/></svg>
+  <p>Nenhum anexo recebido ainda.</p>
+</div>
+{% endif %}
+{% endblock %}

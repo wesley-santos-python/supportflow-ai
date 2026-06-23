@@ -72,6 +72,23 @@ def reminders(request: Request):
     )
 
 
+@router.get("/anexos", response_class=HTMLResponse)
+def anexos(request: Request):
+    """Guia de anexos: lista todos os arquivos recebidos nos tickets do cliente."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return _templates().TemplateResponse(
+        request,
+        "attachments.html",
+        {
+            "user": user.to_dict(),
+            "active": "anexos",
+            "attachments": db.list_attachments(user.id),
+        },
+    )
+
+
 @router.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
     """Página de configurações do cliente (conexão de e-mail, WhatsApp...)."""

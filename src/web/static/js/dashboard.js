@@ -1,7 +1,7 @@
 /* Lógica do dashboard: filtros, cards, modal de resposta, status e sincronização. */
 
 const STATUSES = ["Pendente", "Em Andamento", "Resolvido"];
-let currentFilters = { categoria: "Todos", urgencia: "Todos", status: "Todos", search: "" };
+let currentFilters = { categoria: "Todos", urgencia: "Todos", status: "Todos", search: "", sender: "" };
 let activeTicket = null;
 
 /* Ícone de risco por nível de urgência (cor vem da classe .badge). */
@@ -26,8 +26,63 @@ async function loadTickets() {
   try {
     const data = await api("/api/tickets?" + params.toString());
     renderCards(data.tickets);
+    refreshSummary();
   } catch (e) {
     toast("Erro ao carregar: " + e.message, true);
+  }
+}
+
+/* Atualiza os KPIs (Total/Urgentes/Pendentes/Resolvidos) sem recarregar a página. */
+async function refreshSummary() {
+  try {
+    const s = await api("/api/analytics");
+    setText("kpiTotal", s.total);
+    setText("kpiUrgentes", s.urgentes);
+    setText("kpiPendentes", s.pendentes);
+    setText("kpiResolvidos", s.resolvidos);
+  } catch (_) {}
+}
+
+function setText(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value;
+}
+
+/* ---------------------------------------------------------------- Clientes */
+async function loadSenders() {
+  try {
+    const data = await api("/api/senders");
+    renderClients(data.senders || []);
+  } catch (_) {}
+}
+
+function renderClients(senders) {
+  const box = document.getElementById("clientsList");
+  if (!box) return;
+  const items = [{ sender: "", label: "Todos os clientes", total: "" }]
+    .concat(senders.map((s) => ({ sender: s.sender, label: s.sender, total: s.total, abertos: s.abertos })));
+  box.innerHTML = items.map((s) => `
+    <button class="client-item ${currentFilters.sender === s.sender ? "active" : ""}"
+            data-sender="${escapeHtml(s.sender)}" title="${escapeHtml(s.label)}">
+      <span class="client-name">${escapeHtml(s.label)}</span>
+      ${s.total !== "" ? `<span class="client-count ${s.abertos ? "has-open" : ""}">${s.total}</span>` : ""}
+    </button>`).join("");
+}
+
+function clearClient() {
+  currentFilters.sender = "";
+  showClientTag();
+  document.querySelectorAll("#clientsList .client-item").forEach((el) =>
+    el.classList.toggle("active", el.dataset.sender === ""));
+  loadTickets();
+}
+
+function showClientTag() {
+  const tag = document.getElementById("clientFilterTag");
+  if (!tag) return;
+  tag.hidden = !currentFilters.sender;
+  if (currentFilters.sender) {
+    setText("clientFilterName", currentFilters.sender);
   }
 }
 
@@ -95,6 +150,7 @@ async function syncNow() {
     const r = await api("/api/sync", { method: "POST" });
     toast(`${r.processed} ticket(s) sincronizado(s)`);
     await loadTickets();
+    loadSenders();
   } catch (e) {
     toast("Erro: " + e.message, true);
   } finally {
@@ -150,6 +206,11 @@ function renderModal(t) {
     <div class="field">
       <label>Resumo</label>
       <p>${escapeHtml(t.resumo || "—")}</p>
+    </div>
+
+    <div class="modal-section">
+      <button class="btn ghost tiny" onclick="toggleOriginal()">${icon("i-mail", "ico sm")} Ler e-mail original</button>
+      <pre id="originalEmail" class="original-body" hidden>${escapeHtml(t.body || "(sem conteúdo)")}</pre>
     </div>
 
     <div class="modal-section">
@@ -283,12 +344,36 @@ async function downloadAttachment(id) {
   }
 }
 
+/* Mostra/oculta o corpo original do e-mail no modal. */
+function toggleOriginal() {
+  const el = document.getElementById("originalEmail");
+  if (el) el.hidden = !el.hidden;
+}
+
 /* -------------------------------------------------- Inicialização + refresh */
 document.addEventListener("DOMContentLoaded", () => {
   loadTickets();
+  loadSenders();
+
+  // Filtro por cliente (delegação de clique no rail lateral).
+  const clients = document.getElementById("clientsList");
+  if (clients) {
+    clients.addEventListener("click", (e) => {
+      const item = e.target.closest(".client-item");
+      if (!item) return;
+      currentFilters.sender = item.dataset.sender || "";
+      document.querySelectorAll("#clientsList .client-item").forEach((el) => el.classList.remove("active"));
+      item.classList.add("active");
+      showClientTag();
+      loadTickets();
+    });
+  }
+
   document.getElementById("modal").addEventListener("click", (e) => {
     if (e.target.id === "modal") closeModal();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
-  setInterval(loadTickets, 120000);
+
+  // Atualização automática (tickets, KPIs e clientes) a cada 60s.
+  setInterval(() => { loadTickets(); loadSenders(); }, 60000);
 });

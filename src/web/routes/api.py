@@ -96,11 +96,24 @@ def list_tickets(
     urgencia: Optional[str] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
+    sender: Optional[str] = None,
     user: User = Depends(require_api_user),
 ):
     """Lista os tickets do cliente aplicando filtros opcionais."""
-    tickets = db.query_tickets(user.id, categoria, urgencia, status, search)
+    tickets = db.query_tickets(user.id, categoria, urgencia, status, search, sender)
     return {"tickets": [t.to_dict() for t in tickets]}
+
+
+@router.get("/senders")
+def list_senders(user: User = Depends(require_api_user)):
+    """Lista os remetentes (clientes) do usuário com contagem de tickets."""
+    return {"senders": db.list_senders(user.id)}
+
+
+@router.get("/attachments")
+def list_attachments(user: User = Depends(require_api_user)):
+    """Lista todos os anexos dos tickets do usuário."""
+    return {"attachments": db.list_attachments(user.id)}
 
 
 @router.get("/tickets/{ticket_id}")

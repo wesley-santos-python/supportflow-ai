@@ -89,7 +89,7 @@ class TestAuthFlow:
 class TestWebPages:
     """Páginas HTML autenticadas devem responder 200."""
 
-    @pytest.mark.parametrize("path", ["/", "/analytics", "/reminders", "/settings", "/report"])
+    @pytest.mark.parametrize("path", ["/", "/analytics", "/reminders", "/anexos", "/settings", "/report"])
     def test_pages_render(self, client, path):
         assert client.get(path).status_code == 200
 
@@ -231,3 +231,43 @@ class TestEmailConnection:
             )
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
+
+
+class TestSendersAndAttachments:
+    """Clientes (remetentes), filtro por remetente e guia de anexos."""
+
+    def test_senders_listed_with_counts(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        db.save_ticket({"user_id": user.id, "uid": "30", "sender": "apple@x.com", "subject": "A1", "status": "Pendente"})
+        db.save_ticket({"user_id": user.id, "uid": "31", "sender": "apple@x.com", "subject": "A2", "status": "Resolvido"})
+        db.save_ticket({"user_id": user.id, "uid": "32", "sender": "linkedin@x.com", "subject": "L1", "status": "Pendente"})
+
+        senders = {s["sender"]: s for s in client.get("/api/senders").json()["senders"]}
+        assert senders["apple@x.com"]["total"] == 2
+        assert senders["apple@x.com"]["abertos"] == 1  # 1 aberto, 1 resolvido
+        assert senders["linkedin@x.com"]["total"] == 1
+
+    def test_sender_filter(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        db.save_ticket({"user_id": user.id, "uid": "40", "sender": "apple@x.com", "subject": "AA"})
+        db.save_ticket({"user_id": user.id, "uid": "41", "sender": "linkedin@x.com", "subject": "LL"})
+
+        tickets = client.get("/api/tickets?sender=apple@x.com").json()["tickets"]
+        assert [t["subject"] for t in tickets] == ["AA"]
+
+    def test_attachments_list(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        tid = db.save_ticket({"user_id": user.id, "uid": "50", "sender": "apple@x.com", "subject": "Com anexo"})
+        db.add_attachment({"ticket_id": tid, "filename": "contrato.pdf", "content_type": "application/pdf", "size": 2048})
+
+        atts = client.get("/api/attachments").json()["attachments"]
+        assert len(atts) == 1
+        assert atts[0]["filename"] == "contrato.pdf"
+        assert atts[0]["ticket_subject"] == "Com anexo"
+        assert atts[0]["ticket_sender"] == "apple@x.com"

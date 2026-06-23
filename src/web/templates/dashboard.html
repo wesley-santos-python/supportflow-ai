@@ -24,53 +24,68 @@
 <section class="kpi-grid">
   <div class="kpi">
     <div class="kpi-ico"><svg class="ico"><use href="#i-inbox"/></svg></div>
-    <div><div class="kpi-val">{{ summary.total }}</div><div class="kpi-lbl">Total</div></div>
+    <div><div class="kpi-val" id="kpiTotal">{{ summary.total }}</div><div class="kpi-lbl">Total</div></div>
   </div>
   <div class="kpi danger">
     <div class="kpi-ico"><svg class="ico"><use href="#i-alert"/></svg></div>
-    <div><div class="kpi-val">{{ summary.urgentes }}</div><div class="kpi-lbl">Urgentes</div></div>
+    <div><div class="kpi-val" id="kpiUrgentes">{{ summary.urgentes }}</div><div class="kpi-lbl">Urgentes</div></div>
   </div>
   <div class="kpi warn">
     <div class="kpi-ico"><svg class="ico"><use href="#i-clock"/></svg></div>
-    <div><div class="kpi-val">{{ summary.pendentes }}</div><div class="kpi-lbl">Pendentes</div></div>
+    <div><div class="kpi-val" id="kpiPendentes">{{ summary.pendentes }}</div><div class="kpi-lbl">Pendentes</div></div>
   </div>
   <div class="kpi ok">
     <div class="kpi-ico"><svg class="ico"><use href="#i-check-circle"/></svg></div>
-    <div><div class="kpi-val">{{ summary.resolvidos }}</div><div class="kpi-lbl">Resolvidos</div></div>
+    <div><div class="kpi-val" id="kpiResolvidos">{{ summary.resolvidos }}</div><div class="kpi-lbl">Resolvidos</div></div>
   </div>
 </section>
 
-<section class="toolbar">
-  <div class="search-wrap">
-    <svg class="ico sm"><use href="#i-search"/></svg>
-    <input type="search" id="search" class="search" placeholder="Buscar por assunto, remetente..." oninput="debouncedLoad()" />
-  </div>
-  <div class="chips" id="catChips">
-    <button class="chip active" data-val="Todos">Todos</button>
-    <button class="chip" data-val="Técnico">Técnico</button>
-    <button class="chip" data-val="Financeiro">Financeiro</button>
-    <button class="chip" data-val="Logística">Logística</button>
-    <button class="chip" data-val="Outros">Outros</button>
-  </div>
-  <select id="urgFilter" onchange="loadTickets()">
-    <option value="Todos">Toda urgência</option>
-    <option value="Alta">Alta</option>
-    <option value="Média">Média</option>
-    <option value="Baixa">Baixa</option>
-  </select>
-  <select id="statusFilter" onchange="loadTickets()">
-    <option value="Todos">Todo status</option>
-    <option value="Pendente">Pendente</option>
-    <option value="Em Andamento">Em Andamento</option>
-    <option value="Resolvido">Resolvido</option>
-  </select>
-</section>
+<section class="dash-body">
+  <aside class="clients-rail panel">
+    <h3><svg class="ico sm"><use href="#i-inbox"/></svg> Clientes</h3>
+    <p class="muted small" style="margin:-8px 0 12px">Cada remetente é um cliente.</p>
+    <div id="clientsList" class="clients-list"></div>
+  </aside>
 
-<section id="cards" class="cards"></section>
-<div id="emptyState" class="empty" hidden>
-  <svg class="ico"><use href="#i-inbox"/></svg>
-  <p>Nenhum ticket encontrado.</p>
-</div>
+  <div class="dash-main">
+    <section class="toolbar">
+      <div class="search-wrap">
+        <svg class="ico sm"><use href="#i-search"/></svg>
+        <input type="search" id="search" class="search" placeholder="Buscar por assunto, remetente..." oninput="debouncedLoad()" />
+      </div>
+      <div class="chips" id="catChips">
+        <button class="chip active" data-val="Todos">Todos</button>
+        <button class="chip" data-val="Técnico">Técnico</button>
+        <button class="chip" data-val="Financeiro">Financeiro</button>
+        <button class="chip" data-val="Logística">Logística</button>
+        <button class="chip" data-val="Outros">Outros</button>
+      </div>
+      <select id="urgFilter" onchange="loadTickets()">
+        <option value="Todos">Toda urgência</option>
+        <option value="Alta">Alta</option>
+        <option value="Média">Média</option>
+        <option value="Baixa">Baixa</option>
+      </select>
+      <select id="statusFilter" onchange="loadTickets()">
+        <option value="Todos">Todo status</option>
+        <option value="Pendente">Pendente</option>
+        <option value="Em Andamento">Em Andamento</option>
+        <option value="Resolvido">Resolvido</option>
+      </select>
+    </section>
+
+    <div id="clientFilterTag" class="client-filter-tag" hidden>
+      Filtrando por <strong id="clientFilterName"></strong>
+      <button class="btn tiny ghost" onclick="clearClient()"><svg class="ico sm"><use href="#i-x"/></svg> limpar</button>
+    </div>
+
+    <section id="cards" class="cards"></section>
+    <div id="emptyState" class="empty" hidden>
+      <svg class="ico"><use href="#i-inbox"/></svg>
+      <p>Nenhum ticket encontrado.</p>
+    </div>
+  </div>
+</section>
 
 <!-- Modal de detalhes/resposta (base: fechado; abre via classe .open) -->
 <div id="modal" class="modal">

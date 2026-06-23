@@ -8,7 +8,16 @@ Responsável por:
     - Registrar os roteadores de páginas e de API
 """
 import os
+import time
 from contextlib import asynccontextmanager
+
+# Fuso horário da aplicação (datas dos tickets, logs). Brasil por padrão;
+# sobrescreva com a variável de ambiente TZ se precisar de outro fuso.
+os.environ.setdefault("TZ", "America/Sao_Paulo")
+try:
+    time.tzset()
+except (AttributeError, OSError):  # tzset não existe no Windows
+    pass
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles

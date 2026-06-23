@@ -59,10 +59,15 @@ class AIService:
             ``resposta_sugerida``. Em caso de falha, retorna um fallback seguro.
         """
         prompt = (
-            "Analise este e-mail de suporte e retorne APENAS um JSON válido "
-            "com as chaves: 'urgencia' (Alta/Média/Baixa), 'categoria' "
-            "(Técnico/Financeiro/Logística/Outros), 'resumo' (uma frase), "
-            f"'resposta_sugerida' (texto profissional). E-mail: {email_body}"
+            "Você é um assistente de suporte ao cliente. Analise este e-mail e "
+            "retorne APENAS um JSON válido com as chaves: 'urgencia' "
+            "(Alta/Média/Baixa), 'categoria' (Técnico/Financeiro/Logística/"
+            "Outros), 'resumo' (uma frase objetiva) e 'resposta_sugerida'. "
+            "A 'resposta_sugerida' deve ser em português, pronta para enviar ao "
+            "cliente: amigável, profissional e objetiva — reconhece o problema, "
+            "dá um próximo passo claro e encerra de forma cordial. Não use "
+            "placeholders entre colchetes nem deixe campos a preencher. "
+            f"E-mail: {email_body}"
         )
 
         try:

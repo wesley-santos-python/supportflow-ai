@@ -261,6 +261,7 @@ def query_tickets(
     urgencia: Optional[str] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
+    sender: Optional[str] = None,
 ) -> List[Ticket]:
     """Consulta tickets do usuário aplicando filtros opcionais."""
     db = SessionLocal()
@@ -268,6 +269,8 @@ def query_tickets(
         query = db.query(Ticket).options(selectinload(Ticket.attachments))
         if user_id is not None:
             query = query.filter(Ticket.user_id == user_id)
+        if sender and sender != "Todos":
+            query = query.filter(Ticket.sender == sender)
         if categoria and categoria != "Todos":
             query = query.filter(Ticket.categoria == categoria)
         if urgencia and urgencia != "Todos":
@@ -295,6 +298,32 @@ def get_all_tickets(user_id: Optional[int] = None) -> List[Ticket]:
         if user_id is not None:
             query = query.filter(Ticket.user_id == user_id)
         return query.order_by(Ticket.created_at.desc()).all()
+    finally:
+        db.close()
+
+
+def list_senders(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """
+    Lista os remetentes (cada e-mail é tratado como um "cliente") com a
+    contagem de tickets e quantos estão pendentes, do mais ativo ao menos.
+    """
+    db = SessionLocal()
+    try:
+        pendentes = func.sum(
+            case((Ticket.status != "Resolvido", 1), else_=0)
+        )
+        query = db.query(
+            Ticket.sender,
+            func.count(Ticket.id).label("total"),
+            pendentes.label("abertos"),
+        )
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
+        rows = query.group_by(Ticket.sender).order_by(func.count(Ticket.id).desc()).all()
+        return [
+            {"sender": sender or "(desconhecido)", "total": int(total or 0), "abertos": int(abertos or 0)}
+            for sender, total, abertos in rows
+        ]
     finally:
         db.close()
 
@@ -408,6 +437,25 @@ def get_attachment(attachment_id: int) -> Optional[Attachment]:
     db = SessionLocal()
     try:
         return db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    finally:
+        db.close()
+
+
+def list_attachments(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
+    """Lista todos os anexos dos tickets do usuário (com assunto/remetente)."""
+    db = SessionLocal()
+    try:
+        query = db.query(Attachment).join(Ticket, Attachment.ticket_id == Ticket.id)
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
+        rows = query.order_by(Attachment.created_at.desc()).all()
+        result: List[Dict[str, Any]] = []
+        for att in rows:
+            data = att.to_dict()
+            data["ticket_subject"] = att.ticket.subject if att.ticket else None
+            data["ticket_sender"] = att.ticket.sender if att.ticket else None
+            result.append(data)
+        return result
     finally:
         db.close()
 
