@@ -173,7 +173,11 @@ function renderModal(t) {
     `<button data-status="${s}" class="${t.status === s ? "on" : ""}" onclick="setStatus(${t.id}, '${s}')">${s}</button>`
   ).join("");
 
-  const hasHtml = !!(t.body_html && t.body_html.trim());
+  // Renderiza HTML quando há body_html; e também em tickets antigos cujo
+  // próprio corpo veio em HTML (detecta tags).
+  const looksHtml = /<\s*(html|body|table|div|p|br|a|img|span|style)\b/i.test(t.body || "");
+  const rawHtml = (t.body_html && t.body_html.trim()) ? t.body_html : (looksHtml ? t.body : "");
+  const hasHtml = !!rawHtml;
 
   document.getElementById("modalBody").innerHTML = `
     ${urgencyBadge(t.urgencia)}
@@ -182,7 +186,10 @@ function renderModal(t) {
 
     <div class="modal-section modal-row" style="justify-content:space-between">
       <div class="seg" id="statusSeg">${seg}</div>
-      <button class="btn danger tiny" onclick="deleteTicket(${t.id})">${icon("i-trash", "ico sm")} Excluir</button>
+      <div class="modal-row">
+        <button class="btn tiny ghost" onclick="reanalyze(${t.id})">${icon("i-ai", "ico sm")} Reanalisar</button>
+        <button class="btn danger tiny" onclick="deleteTicket(${t.id})">${icon("i-trash", "ico sm")} Excluir</button>
+      </div>
     </div>
 
     <div class="field">
@@ -226,7 +233,7 @@ function renderModal(t) {
   // E-mail HTML é renderizado num iframe isolado (sandbox, sem scripts).
   if (hasHtml) {
     const frame = document.getElementById("originalEmail");
-    if (frame) frame.srcdoc = t.body_html;
+    if (frame) frame.srcdoc = rawHtml;
   }
 }
 
@@ -238,6 +245,18 @@ async function setStatus(id, status) {
     document.querySelectorAll("#statusSeg button").forEach((b) =>
       b.classList.toggle("on", b.dataset.status === status));
     toast(`Status atualizado: ${status}`);
+    loadTickets();
+  } catch (e) {
+    toast("Erro: " + e.message, true);
+  }
+}
+
+async function reanalyze(id) {
+  toast("Reanalisando com a IA...");
+  try {
+    await postJSON(`/api/tickets/${id}/reanalyze`, {});
+    toast("Ticket reanalisado");
+    openTicket(id);   // reabre o modal já com a análise corrigida
     loadTickets();
   } catch (e) {
     toast("Erro: " + e.message, true);

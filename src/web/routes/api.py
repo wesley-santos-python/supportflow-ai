@@ -165,6 +165,22 @@ def rewrite(ticket_id: int, payload: RewriteRequest, user: User = Depends(requir
     return {"text": new_text}
 
 
+@router.post("/tickets/{ticket_id}/reanalyze")
+def reanalyze(ticket_id: int, user: User = Depends(require_api_user)):
+    """Reprocessa o ticket com a IA atual (corrige análises antigas/erradas)."""
+    ticket = db.get_ticket_by_id(ticket_id, user.id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket não encontrado")
+    cfg = UserConfig(user.id)
+    analysis = AIService().analyze_ticket(
+        ticket.body or "",
+        categories=cfg.get("CATEGORIES"),
+        urgency_criteria=cfg.get("URGENCY_CRITERIA"),
+    )
+    db.update_ticket_analysis(ticket_id, analysis, user.id)
+    return {"ok": True, "analysis": analysis}
+
+
 @router.post("/tickets/{ticket_id}/reply")
 async def reply(
     ticket_id: int,
@@ -394,6 +410,7 @@ async def upload_logo(
 ):
     """Recebe um arquivo de logo, guarda no banco e devolve a URL pública servida."""
     import base64
+    import time
 
     if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="Envie um arquivo de imagem (PNG, JPG, SVG...).")
@@ -408,7 +425,8 @@ async def upload_logo(
     base = str(request.base_url).rstrip("/")
     if base.startswith("http://") and not any(h in base for h in ("localhost", "127.0.0.1")):
         base = "https://" + base[len("http://"):]
-    url = f"{base}/logo/{user.id}"
+    # ?v= muda a cada upload → evita logo antiga em cache (preview/e-mail).
+    url = f"{base}/logo/{user.id}?v={int(time.time())}"
     UserConfig(user.id).set("COMPANY_LOGO_URL", url)
     return {"ok": True, "url": url}
 

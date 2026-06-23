@@ -223,6 +223,29 @@ class TestTicketActions:
         assert t["created_at"].endswith("Z")
         assert t["body_html"] == "<b>oi</b>"
 
+    def test_reanalyze_updates_classification(self, client):
+        """Reanalisar reprocessa o ticket com a IA e atualiza a classificação."""
+        from unittest.mock import patch
+
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        tid = db.save_ticket({
+            "user_id": user.id, "uid": "70", "sender": "promo@loja.com",
+            "subject": "Cupom!", "body": "Aproveite descontos!", "urgencia": "Alta",
+            "categoria": "Financeiro",
+        })
+        with patch("src.web.routes.api.AIService") as MockAI:
+            MockAI.return_value.analyze_ticket.return_value = {
+                "urgencia": "Baixa", "categoria": "Outros",
+                "resumo": "E-mail promocional", "resposta_sugerida": "Obrigado!",
+            }
+            resp = client.post(f"/api/tickets/{tid}/reanalyze")
+        assert resp.status_code == 200
+        t = client.get(f"/api/tickets/{tid}").json()
+        assert t["urgencia"] == "Baixa"
+        assert t["categoria"] == "Outros"
+
 
 class TestEmailConnection:
     """O teste de conexão de e-mail deve devolver um motivo claro."""

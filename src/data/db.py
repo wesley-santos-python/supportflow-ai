@@ -367,6 +367,18 @@ def update_ticket_suggestion(
     return _update_ticket(ticket_id, user_id, resposta_sugerida=resposta_sugerida)
 
 
+def update_ticket_analysis(ticket_id: int, analysis: dict, user_id: Optional[int] = None) -> bool:
+    """Atualiza urgência/categoria/resumo/resposta de um ticket (reanálise por IA)."""
+    return _update_ticket(
+        ticket_id,
+        user_id,
+        urgencia=analysis.get("urgencia", "Média"),
+        categoria=analysis.get("categoria", "Outros"),
+        resumo=analysis.get("resumo", "Sem resumo"),
+        resposta_sugerida=analysis.get("resposta_sugerida", ""),
+    )
+
+
 def mark_ticket_responded(ticket_id: int, user_id: Optional[int] = None) -> bool:
     """Marca um ticket como respondido e o move para 'Resolvido'."""
     return _update_ticket(
