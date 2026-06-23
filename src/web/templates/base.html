@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}{{ app_name }}{% endblock %} · {{ company_name }}</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <!-- PWA: app instalável (janela própria no Mac/Windows/iOS) -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#08090A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="{{ app_name }}" />
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -62,6 +69,9 @@
       </nav>
 
       <div class="sidebar-foot">
+        <button id="installBtn" class="btn tiny full" hidden onclick="sfaInstall()" title="Instalar como aplicativo">
+          <svg class="ico sm"><use href="#i-download"/></svg> Instalar app
+        </button>
         {% if user %}
         <div class="user-box">
           <div class="user-avatar">{{ user.name[0]|upper }}</div>
@@ -89,6 +99,48 @@
 
   <div id="toast" class="toast"></div>
   <script src="/static/js/app.js"></script>
+  <!-- PWA: registra o service worker e controla o botão "Instalar app" -->
+  <script>
+    (function () {
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js").catch(function () {});
+        });
+      }
+      var deferred = null;
+      var btn = document.getElementById("installBtn");
+      var standalone =
+        window.matchMedia("(display-mode: standalone)").matches ||
+        window.navigator.standalone === true;
+
+      // Chrome/Edge (Mac/Windows): dispara quando o app é instalável.
+      window.addEventListener("beforeinstallprompt", function (e) {
+        e.preventDefault();
+        deferred = e;
+        if (btn && !standalone) btn.hidden = false;
+      });
+
+      window.sfaInstall = function () {
+        if (!deferred) {
+          // Safari/iOS e demais navegadores não expõem o prompt programático.
+          if (typeof toast === "function") {
+            toast("Para instalar: use o menu do navegador → “Instalar app” (ou Compartilhar → “Adicionar à Tela de Início” no iPhone).");
+          }
+          return;
+        }
+        deferred.prompt();
+        deferred.userChoice.finally(function () {
+          deferred = null;
+          if (btn) btn.hidden = true;
+        });
+      };
+
+      window.addEventListener("appinstalled", function () {
+        if (btn) btn.hidden = true;
+      });
+      if (standalone && btn) btn.hidden = true;
+    })();
+  </script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

@@ -20,6 +20,7 @@ except (AttributeError, OSError):  # tzset não existe no Windows
     pass
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.gzip import GZipMiddleware
@@ -121,6 +122,24 @@ def create_app() -> FastAPI:
     def healthz():
         """Health-check leve para o Railway/monitoramento (sem autenticação)."""
         return {"status": "ok", "app": app.title, "version": app.version}
+
+    # --- PWA: app instalável (janela própria no Mac/Windows) ---
+    # O service worker precisa ser servido a partir da raiz para ter escopo "/"
+    # (a partir de /static/ ele só controlaria /static/). Por isso o expomos aqui.
+    @app.get("/sw.js", include_in_schema=False)
+    def service_worker():
+        return FileResponse(
+            os.path.join(_STATIC_DIR, "js", "sw.js"),
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/", "Cache-Control": "no-cache"},
+        )
+
+    @app.get("/manifest.webmanifest", include_in_schema=False)
+    def manifest():
+        return FileResponse(
+            os.path.join(_STATIC_DIR, "manifest.webmanifest"),
+            media_type="application/manifest+json",
+        )
 
     # Import tardio evita ciclos durante a montagem.
     from src.web.routes import api, auth_routes, pages
