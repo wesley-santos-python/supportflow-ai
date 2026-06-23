@@ -84,6 +84,9 @@ def sync_now(user: User = Depends(require_api_user)):
     except EmailConnectionError as e:
         # Mostra o motivo real (ex.: senha de app incorreta) em vez de "0 tickets".
         raise HTTPException(status_code=400, detail=e.message)
+    except Exception as e:  # qualquer outra falha vira mensagem clara, nunca um 500 mudo
+        logger.exception(f"Falha inesperada no sync (user={user.id})")
+        raise HTTPException(status_code=500, detail=f"Falha ao sincronizar: {e}")
     return {"processed": processed}
 
 

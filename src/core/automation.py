@@ -58,32 +58,37 @@ class SupportController:
         processed = 0
 
         for mail in new_emails:
-            if not mail.get("body"):
-                logger.warning(f"E-mail sem corpo ignorado: {mail.get('subject')}")
+            # Um e-mail problemático não deve derrubar o lote inteiro.
+            try:
+                if not mail.get("body"):
+                    logger.warning(f"E-mail sem corpo ignorado: {mail.get('subject')}")
+                    continue
+
+                logger.info(f"Analisando ticket: {mail['subject']}")
+                analysis = self.ai_api.analyze_ticket(mail["body"])
+
+                ticket_data = {
+                    "user_id": self.user_id,
+                    "uid": mail["id"],
+                    "sender": mail["sender"],
+                    "subject": mail["subject"],
+                    "body": mail["body"],
+                    "urgencia": analysis.get("urgencia", "Média"),
+                    "categoria": analysis.get("categoria", "Outros"),
+                    "resumo": analysis.get("resumo", "Sem resumo"),
+                    "resposta_sugerida": analysis.get("resposta_sugerida", ""),
+                }
+
+                ticket_id = db.save_ticket(ticket_data)
+                if not ticket_id:
+                    continue
+
+                self._register_attachments(ticket_id, mail.get("attachments", []), auto_download)
+                self.email_api.mark_as_read(mail["id"])
+                processed += 1
+            except Exception as e:
+                logger.error(f"Falha ao processar e-mail '{mail.get('subject')}': {e}")
                 continue
-
-            logger.info(f"Analisando ticket: {mail['subject']}")
-            analysis = self.ai_api.analyze_ticket(mail["body"])
-
-            ticket_data = {
-                "user_id": self.user_id,
-                "uid": mail["id"],
-                "sender": mail["sender"],
-                "subject": mail["subject"],
-                "body": mail["body"],
-                "urgencia": analysis.get("urgencia", "Média"),
-                "categoria": analysis.get("categoria", "Outros"),
-                "resumo": analysis.get("resumo", "Sem resumo"),
-                "resposta_sugerida": analysis.get("resposta_sugerida", ""),
-            }
-
-            ticket_id = db.save_ticket(ticket_data)
-            if not ticket_id:
-                continue
-
-            self._register_attachments(ticket_id, mail.get("attachments", []), auto_download)
-            self.email_api.mark_as_read(mail["id"])
-            processed += 1
 
         logger.info(f"Sincronização concluída (user={self.user_id}): {processed} tickets")
         return processed
