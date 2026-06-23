@@ -81,6 +81,7 @@ def _run_migrations() -> None:
     """
     statements = [
         "ALTER TABLE tickets ADD COLUMN user_id INTEGER",
+        "ALTER TABLE tickets ADD COLUMN body_html TEXT",
         "ALTER TABLE reminders ADD COLUMN user_id INTEGER",
         "ALTER TABLE scheduled_replies ADD COLUMN user_id INTEGER",
     ]

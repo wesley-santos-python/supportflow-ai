@@ -16,7 +16,7 @@ Tabelas:
     - scheduled_replies: respostas agendadas para envio futuro
     - app_settings: configurações globais da aplicação (key/value)
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from sqlalchemy import (
@@ -32,6 +32,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
+
+def _utcnow() -> datetime:
+    """Agora em UTC, naive (consistente em qualquer fuso do servidor)."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class User(Base):
@@ -127,6 +132,7 @@ class Ticket(Base):
     sender: str = Column(String(255), nullable=False)
     subject: str = Column(String(500))
     body: Optional[str] = Column(Text)
+    body_html: Optional[str] = Column(Text)
     urgencia: str = Column(String(50), default="Média", index=True)
     categoria: str = Column(String(100), default="Outros", index=True)
     resumo: Optional[str] = Column(Text)
@@ -134,7 +140,7 @@ class Ticket(Base):
     status: str = Column(String(50), default="Pendente", index=True)
     response_sent: bool = Column(Boolean, default=False)
     responded_at: Optional[datetime] = Column(DateTime, nullable=True)
-    created_at: datetime = Column(DateTime, default=datetime.now, index=True)
+    created_at: datetime = Column(DateTime, default=_utcnow, index=True)
 
     attachments = relationship(
         "Attachment",
@@ -155,14 +161,16 @@ class Ticket(Base):
             "sender": self.sender,
             "subject": self.subject,
             "body": self.body,
+            "body_html": self.body_html,
             "urgencia": self.urgencia,
             "categoria": self.categoria,
             "resumo": self.resumo,
             "resposta_sugerida": self.resposta_sugerida,
             "status": self.status,
             "response_sent": self.response_sent,
-            "responded_at": self.responded_at.isoformat() if self.responded_at else None,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            # 'Z' marca como UTC → o navegador exibe no fuso local (Brasília).
+            "responded_at": (self.responded_at.isoformat() + "Z") if self.responded_at else None,
+            "created_at": (self.created_at.isoformat() + "Z") if self.created_at else None,
             "has_attachments": bool(self.attachments),
         }
         if include_attachments:
@@ -198,7 +206,7 @@ class Attachment(Base):
     size: int = Column(Integer, default=0)
     stored_path: Optional[str] = Column(String(1000))
     downloaded: bool = Column(Boolean, default=False)
-    created_at: datetime = Column(DateTime, default=datetime.now)
+    created_at: datetime = Column(DateTime, default=_utcnow)
 
     ticket = relationship("Ticket", back_populates="attachments")
 
@@ -211,7 +219,7 @@ class Attachment(Base):
             "content_type": self.content_type,
             "size": self.size,
             "downloaded": self.downloaded,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "created_at": (self.created_at.isoformat() + "Z") if self.created_at else None,
         }
 
 

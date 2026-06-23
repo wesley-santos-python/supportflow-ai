@@ -18,6 +18,8 @@ google-genai>=1.0.0
 python-dotenv>=1.0.0
 imap-tools>=1.0.0
 sqlalchemy>=2.0.0
+# Banco de fusos (garante conversão p/ horário de Brasília em qualquer container)
+tzdata>=2024.1
 
 # --- Banco em produção (opcional: PostgreSQL via DATABASE_URL no Railway) ---
 psycopg2-binary>=2.9.0

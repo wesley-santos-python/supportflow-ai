@@ -45,7 +45,7 @@
   <tbody>
     {% for t in tickets %}
     <tr>
-      <td>{{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at }}</td>
+      <td>{{ t.created_at | brt }}</td>
       <td>{{ t.sender }}</td>
       <td>{{ t.subject }}</td>
       <td>{{ t.categoria }}</td>

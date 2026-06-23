@@ -69,19 +69,25 @@ class AIService:
         email_body = (email_body or "")[:4000]
         cats = categories or "Técnico,Financeiro,Logística,Outros"
         crit = (urgency_criteria or "").strip()
-        crit_line = f"Considere urgência ALTA quando: {crit}. " if crit else ""
+        alta = f", como: {crit}" if crit else ""
 
         prompt = (
-            "Você é um assistente de suporte ao cliente. Analise este e-mail e "
-            "retorne APENAS um JSON válido com as chaves: 'urgencia' "
-            f"(Alta/Média/Baixa), 'categoria' (escolha exatamente uma entre: {cats}), "
-            "'resumo' (uma frase objetiva) e 'resposta_sugerida'. "
-            f"{crit_line}"
-            "A 'resposta_sugerida' deve ser em português, pronta para enviar ao "
-            "cliente: amigável, profissional e objetiva — reconhece o problema, "
-            "dá um próximo passo claro e encerra de forma cordial. Não use "
-            "placeholders entre colchetes nem deixe campos a preencher. "
-            f"E-mail: {email_body}"
+            "Você é um assistente de suporte ao cliente. Leia o e-mail e classifique "
+            "pelo CONTEÚDO REAL — nunca por palavras isoladas. Retorne APENAS um JSON "
+            "válido com as chaves: 'urgencia' (Alta/Média/Baixa), 'categoria' (escolha "
+            f"exatamente uma entre: {cats}), 'resumo' (uma frase objetiva do que o "
+            "e-mail realmente trata) e 'resposta_sugerida'.\n\n"
+            "Regras de urgência:\n"
+            "- E-mails de marketing, promoção, newsletter, cupom, propaganda, "
+            "confirmação ou notificação automática NÃO são urgentes (urgencia='Baixa') "
+            "e normalmente não exigem ação.\n"
+            f"- Só use urgencia='Alta' para um problema real e grave do cliente{alta}.\n"
+            "- NÃO invente problemas que não estão escritos no e-mail (ex.: jamais "
+            "trate uma oferta de desconto/cupom como cobrança, reclamação ou fraude).\n\n"
+            "A 'resposta_sugerida' deve ser em português, amigável, profissional e "
+            "objetiva, pronta para enviar; se o e-mail for apenas marketing/automático, "
+            "responda algo curto e cortês. Não use placeholders entre colchetes.\n\n"
+            f"E-mail:\n{email_body}"
         )
 
         try:

@@ -10,6 +10,7 @@ de e-mail daquele cliente. A IA (Gemini) é global, fornecida pelo provedor do
 SaaS via variáveis de ambiente.
 """
 import json
+import re
 from datetime import datetime
 from typing import List, Optional
 
@@ -21,6 +22,15 @@ from src.user_config import UserConfig
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+
+def _html_to_text(html: str) -> str:
+    """Extrai texto legível de um HTML (para analisar e-mails só-HTML)."""
+    if not html:
+        return ""
+    text = re.sub(r"(?is)<(script|style)[^>]*>.*?</\1>", " ", html)
+    text = re.sub(r"(?s)<[^>]+>", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
 
 
 class SupportController:
@@ -67,13 +77,18 @@ class SupportController:
         for mail in new_emails:
             # Um e-mail problemático não deve derrubar o lote inteiro.
             try:
-                if not mail.get("body"):
-                    logger.warning(f"E-mail sem corpo ignorado: {mail.get('subject')}")
+                html = mail.get("html") or ""
+                text = (mail.get("body") or "").strip()
+                # Conteúdo para a IA: usa o texto; se for e-mail só-HTML, extrai do HTML.
+                content = text or _html_to_text(html)
+                if not content:
+                    logger.warning(f"E-mail sem conteúdo ignorado: {mail.get('subject')}")
+                    self.email_api.mark_as_read(mail["id"])
                     continue
 
                 logger.info(f"Analisando ticket: {mail['subject']}")
                 analysis = self.ai_api.analyze_ticket(
-                    mail["body"],
+                    content,
                     categories=self.cfg.get("CATEGORIES"),
                     urgency_criteria=self.cfg.get("URGENCY_CRITERIA"),
                 )
@@ -83,7 +98,8 @@ class SupportController:
                     "uid": mail["id"],
                     "sender": mail["sender"],
                     "subject": mail["subject"],
-                    "body": mail["body"],
+                    "body": text or content,
+                    "body_html": html or None,
                     "urgencia": analysis.get("urgencia", "Média"),
                     "categoria": analysis.get("categoria", "Outros"),
                     "resumo": analysis.get("resumo", "Sem resumo"),
@@ -92,6 +108,9 @@ class SupportController:
 
                 ticket_id = db.save_ticket(ticket_data)
                 if not ticket_id:
+                    # Duplicado (já existe): marca como lido para NÃO reprocessar
+                    # o mesmo e-mail a cada ciclo (evita loop e gasto de IA).
+                    self.email_api.mark_as_read(mail["id"])
                     continue
 
                 self._register_attachments(ticket_id, mail.get("attachments", []), auto_download)

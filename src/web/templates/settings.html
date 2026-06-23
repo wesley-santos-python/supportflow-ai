@@ -100,9 +100,13 @@
       <label>Logo — cole uma URL
         <input name="company_logo_url" value="{{ settings.COMPANY_LOGO_URL or '' }}" placeholder="https://.../logo.png" />
       </label>
-      <label>…ou envie um arquivo
+      <label>…ou envie um arquivo (PNG, JPG, SVG — até 2 MB)
         <input type="file" id="logoFile" accept="image/*" onchange="uploadLogo()" />
       </label>
+      <div style="grid-column:1/-1">
+        <img id="logoPreview" class="logo-thumb" src="{{ settings.COMPANY_LOGO_URL or '' }}"
+             alt="Sua logo" {{ '' if settings.COMPANY_LOGO_URL else 'hidden' }} />
+      </div>
       <label>E-mail de contato (rodapé)
         <input name="company_email" value="{{ settings.COMPANY_EMAIL or '' }}" placeholder="contato@empresa.com" />
       </label>

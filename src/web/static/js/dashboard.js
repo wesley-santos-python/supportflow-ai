@@ -173,6 +173,8 @@ function renderModal(t) {
     `<button data-status="${s}" class="${t.status === s ? "on" : ""}" onclick="setStatus(${t.id}, '${s}')">${s}</button>`
   ).join("");
 
+  const hasHtml = !!(t.body_html && t.body_html.trim());
+
   document.getElementById("modalBody").innerHTML = `
     ${urgencyBadge(t.urgencia)}
     <h2>${escapeHtml(t.subject || "(sem assunto)")}</h2>
@@ -190,7 +192,9 @@ function renderModal(t) {
 
     <div class="modal-section">
       <button class="btn ghost tiny" onclick="toggleOriginal()">${icon("i-mail", "ico sm")} Ler e-mail original</button>
-      <pre id="originalEmail" class="original-body" hidden>${escapeHtml(t.body || "(sem conteúdo)")}</pre>
+      ${hasHtml
+        ? `<iframe id="originalEmail" class="original-frame" sandbox hidden></iframe>`
+        : `<div id="originalEmail" class="original-body" hidden>${escapeHtml(t.body || "(sem conteúdo)")}</div>`}
     </div>
 
     <div class="modal-section">
@@ -218,6 +222,12 @@ function renderModal(t) {
       </div>
       <button class="btn primary" onclick="sendReply(${t.id})">${icon("i-send", "ico sm")} Enviar agora</button>
     </div>`;
+
+  // E-mail HTML é renderizado num iframe isolado (sandbox, sem scripts).
+  if (hasHtml) {
+    const frame = document.getElementById("originalEmail");
+    if (frame) frame.srcdoc = t.body_html;
+  }
 }
 
 /* --------------------------------------------------------------- Status */

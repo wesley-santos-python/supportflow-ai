@@ -91,7 +91,7 @@ class EmailService:
             criteria["date_gte"] = date.today() - timedelta(days=since_days)
 
         try:
-            with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
+            with MailBox(self.imap_server, timeout=25).login(self.user, self.password) as mailbox:
                 for msg in mailbox.fetch(AND(**criteria), limit=limit, reverse=True):
                     emails_payload.append(
                         {
@@ -99,6 +99,7 @@ class EmailService:
                             "sender": msg.from_,
                             "subject": msg.subject,
                             "body": msg.text,
+                            "html": msg.html,
                             "date": msg.date,
                             "attachments": self._extract_attachment_meta(msg),
                         }
@@ -127,7 +128,7 @@ class EmailService:
                 message="Informe o e-mail e a senha de app antes de testar."
             )
         try:
-            with MailBox(self.imap_server).login(self.user, self.password):
+            with MailBox(self.imap_server, timeout=25).login(self.user, self.password):
                 pass
         except Exception as e:
             logger.error(f"Teste de conexão de e-mail falhou: {e}")
@@ -139,7 +140,7 @@ class EmailService:
     def mark_as_read(self, uid: str) -> bool:
         """Marca um e-mail como lido. Retorna ``True`` se bem-sucedido."""
         try:
-            with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
+            with MailBox(self.imap_server, timeout=25).login(self.user, self.password) as mailbox:
                 mailbox.flag(uid, "\\Seen", True)
             logger.debug(f"E-mail {uid} marcado como lido")
             return True
@@ -159,7 +160,7 @@ class EmailService:
             Bytes do anexo, ou ``None`` se não encontrado.
         """
         try:
-            with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
+            with MailBox(self.imap_server, timeout=25).login(self.user, self.password) as mailbox:
                 for msg in mailbox.fetch(AND(uid=uid)):
                     for att in msg.attachments:
                         if att.filename == filename:
@@ -219,7 +220,7 @@ class EmailService:
             self._attach_file(message, path)
 
         try:
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+            with smtplib.SMTP(self.smtp_server, self.smtp_port, timeout=25) as server:
                 server.starttls()
                 server.login(self.user, self.password)
                 server.send_message(message)

@@ -40,10 +40,39 @@ _STATIC_DIR = os.path.join(_BASE_DIR, "static")
 templates = Jinja2Templates(directory=_TEMPLATES_DIR)
 
 
+def _brt(value) -> str:
+    """Formata um timestamp (armazenado em UTC) no horário de Brasília."""
+    from datetime import datetime, timedelta, timezone
+
+    if not value:
+        return ""
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo("America/Sao_Paulo")
+    except Exception:  # pragma: no cover - fallback fixo UTC-3
+        tz = timezone(timedelta(hours=-3))
+
+    if isinstance(value, str):
+        try:
+            dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return value
+    elif isinstance(value, datetime):
+        dt = value
+    else:
+        return str(value)
+
+    if dt.tzinfo is None:  # naive = UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(tz).strftime("%d/%m/%Y %H:%M")
+
+
 def _inject_globals() -> None:
     """Disponibiliza variáveis de marca globalmente nos templates."""
     templates.env.globals["company_name"] = config.get("COMPANY_NAME", "Floatech")
     templates.env.globals["app_name"] = config.get("APP_NAME", "SupportFlow AI")
+    templates.env.filters["brt"] = _brt
 
 
 @asynccontextmanager

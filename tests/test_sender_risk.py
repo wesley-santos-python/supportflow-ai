@@ -33,3 +33,12 @@ class TestRealFile:
         assert not is_real_file("winmail.dat")
         assert not is_real_file("")
         assert not is_real_file("sem_extensao")
+
+
+class TestHtmlToText:
+    def test_strips_tags_and_styles(self):
+        from src.core.automation import _html_to_text
+
+        assert _html_to_text("<p>Olá <b>mundo</b></p>") == "Olá mundo"
+        assert _html_to_text("<style>x{color:red}</style><p>oi</p>") == "oi"
+        assert _html_to_text("") == ""

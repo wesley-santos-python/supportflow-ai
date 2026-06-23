@@ -81,6 +81,8 @@ async function uploadLogo() {
   try {
     const r = await api("/api/logo", { method: "POST", body: fd });
     document.getElementById("settingsForm").company_logo_url.value = r.url;
+    const thumb = document.getElementById("logoPreview");
+    if (thumb) { thumb.src = r.url + "?t=" + Date.now(); thumb.hidden = false; }
     toast("✓ Logo enviada");
     previewEmail();
   } catch (e) {

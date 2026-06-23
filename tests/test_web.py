@@ -210,6 +210,19 @@ class TestTicketActions:
         subjects = [t["subject"] for t in client.get("/api/tickets").json()["tickets"]]
         assert subjects == ["alta-aberta", "baixa-aberta", "alta-resolvida"]
 
+    def test_ticket_dict_has_utc_marker_and_html(self, client):
+        """created_at sai com 'Z' (UTC) p/ o navegador localizar; body_html é exposto."""
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        tid = db.save_ticket({
+            "user_id": user.id, "uid": "60", "sender": "x@x.com",
+            "subject": "HTML", "body": "oi", "body_html": "<b>oi</b>",
+        })
+        t = client.get(f"/api/tickets/{tid}").json()
+        assert t["created_at"].endswith("Z")
+        assert t["body_html"] == "<b>oi</b>"
+
 
 class TestEmailConnection:
     """O teste de conexão de e-mail deve devolver um motivo claro."""

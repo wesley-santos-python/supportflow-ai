@@ -398,8 +398,8 @@ async def upload_logo(
     if not (file.content_type or "").startswith("image/"):
         raise HTTPException(status_code=400, detail="Envie um arquivo de imagem (PNG, JPG, SVG...).")
     data = await file.read()
-    if len(data) > 500_000:
-        raise HTTPException(status_code=400, detail="Logo muito grande (máximo 500 KB).")
+    if len(data) > 2_000_000:
+        raise HTTPException(status_code=400, detail="Logo muito grande (máximo 2 MB).")
 
     db.set_user_setting(user.id, "COMPANY_LOGO_DATA", base64.b64encode(data).decode("ascii"))
     db.set_user_setting(user.id, "COMPANY_LOGO_TYPE", file.content_type)
