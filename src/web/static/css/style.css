@@ -68,6 +68,27 @@ a { color: var(--brand); text-decoration: none; }
 }
 .copyright { font-size: 11px; color: var(--muted); text-align: center; }
 
+/* Usuário logado (sidebar) */
+.user-box { display: flex; align-items: center; gap: 10px; background: var(--panel); padding: 10px; border-radius: 10px; border: 1px solid var(--border); }
+.user-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--brand-grad); color: #021016; display: grid; place-items: center; font-weight: 800; flex-shrink: 0; }
+.user-meta { flex: 1; min-width: 0; }
+.user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-email { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.logout { color: var(--muted); font-size: 18px; text-decoration: none; padding: 4px; }
+.logout:hover { color: var(--danger); }
+
+/* Telas de autenticação (login/cadastro) */
+.auth-body { display: grid; place-items: center; min-height: 100vh; padding: 20px; }
+.auth-card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 36px; width: min(420px, 100%); box-shadow: var(--shadow); }
+.auth-brand { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+.auth-card h1 { font-size: 24px; font-weight: 800; }
+.auth-form { display: flex; flex-direction: column; gap: 14px; margin: 22px 0 16px; }
+.auth-form label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--muted); }
+.auth-form input { background: var(--bg-soft); border: 1px solid var(--border); color: var(--text); padding: 12px 14px; border-radius: 10px; font-size: 14px; font-family: inherit; }
+.auth-foot { text-align: center; font-size: 13px; color: var(--muted); }
+.auth-error { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.4); color: #ff9b9b; padding: 11px 14px; border-radius: 10px; font-size: 13px; }
+.auth-ok { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.4); color: #9be8b6; padding: 11px 14px; border-radius: 10px; font-size: 13px; }
+
 /* Cabeçalho de página ------------------------------------------------------*/
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; gap: 16px; }
 .page-head h1 { font-size: 26px; font-weight: 800; }

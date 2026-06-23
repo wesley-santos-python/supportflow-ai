@@ -39,6 +39,16 @@
       </nav>
 
       <div class="sidebar-foot">
+        {% if user %}
+        <div class="user-box">
+          <div class="user-avatar">{{ user.name[0]|upper }}</div>
+          <div class="user-meta">
+            <div class="user-name">{{ user.name }}</div>
+            <div class="user-email">{{ user.email }}</div>
+          </div>
+          <a href="/logout" class="logout" title="Sair">⎋</a>
+        </div>
+        {% endif %}
         <div class="badge-ai">⚡ Gemini 3.1 Flash Lite</div>
         <div class="copyright">© 2026 {{ company_name }}</div>
       </div>

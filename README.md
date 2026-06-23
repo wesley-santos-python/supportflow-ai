@@ -22,6 +22,8 @@ _by **Floatech** — Weslei Santos_
 
 ## 📋 Funcionalidades
 
+- 👥 **SaaS multi-cliente** — login por e-mail+senha; cada cliente vê apenas os próprios dados e conecta o próprio e-mail
+- 🔐 **Segurança** — senhas com hash bcrypt; credenciais de e-mail dos clientes criptografadas (Fernet/AES)
 - 🌐 **Interface web moderna** — dashboard responsivo em dark mode, com cards de tickets
 - 🤖 **Análise com IA (Gemini 3.1 Flash Lite)** — classifica urgência, categoria, resumo e gera resposta sugerida
 - 📊 **Painel de análise com gráficos** — distribuição por categoria, urgência, status e volume por dia
@@ -31,7 +33,7 @@ _by **Floatech** — Weslei Santos_
 - ⏰ **Lembretes / follow-ups** — crie lembretes associados (ou não) a um ticket
 - 📎 **Anexos organizados** — download opcional sob demanda (estrutura por ticket), visualização e impressão pelo sistema
 - 📄 **Relatórios** — exportação em JSON/CSV e relatório imprimível (PDF via navegador)
-- ⚙️ **Configuração rápida** — conecte e-mail e IA pela própria interface, sem editar arquivos
+- ⚙️ **Configuração rápida por cliente** — cada cliente conecta o próprio e-mail pela interface, sem editar arquivos
 - 🔄 **Atualização automática** — sincronização de e-mails a cada 2 minutos (configurável)
 - 📱 **Pronto para WhatsApp** — resumo de e-mails urgentes preparado para envio ao responsável
 
@@ -65,29 +67,34 @@ pip install -r requirements.txt
 
 ## ⚙️ Configuração
 
-A configuração pode ser feita **inteiramente pela interface web** (recomendado)
-ou por variáveis de ambiente. Valores salvos na interface têm prioridade.
+A configuração é dividida em dois níveis:
 
-### Opção A — Pela interface (recomendado)
+### 1. Global — do dono da plataforma (`.env` / variáveis de ambiente)
 
-1. Inicie a aplicação (veja abaixo) e acesse **Configurações**.
-2. Informe o provedor, e-mail e senha de app.
-3. Cole a API Key do Gemini.
-4. Salve — pronto para usar. ✅
-
-### Opção B — Arquivo `.env`
+A IA é fornecida pela plataforma (você paga o Gemini para todos os clientes).
 
 ```env
-EMAIL_USER=seu-email@gmail.com
-EMAIL_PASS=sua-senha-de-app
+# Obrigatório em produção: assina sessões e criptografa segredos dos clientes
+SECRET_KEY=use-um-segredo-forte-e-unico   # ex.: openssl rand -hex 32
+
+# IA global (a plataforma fornece)
 AI_API_KEY=sua-chave-api-gemini
 GEMINI_MODEL=gemini-3.1-flash-lite
+
+# Intervalo de sincronização do scheduler (vale para todos)
 SYNC_INTERVAL_MINUTES=2
 ```
 
-> **Gmail:** ative a verificação em 2 etapas e gere uma
-> [Senha de App](https://myaccount.google.com/apppasswords).
 > **Gemini:** obtenha a chave no [Google AI Studio](https://aistudio.google.com/).
+
+### 2. Por cliente — pela interface web (após login)
+
+Cada cliente cria sua conta, faz login e conecta o **próprio e-mail** em
+**Configurações** (provedor, e-mail e senha de app). A senha é criptografada
+antes de ser salva. Nenhuma credencial de cliente fica em `.env`.
+
+> **Gmail:** o cliente deve ativar a verificação em 2 etapas e gerar uma
+> [Senha de App](https://myaccount.google.com/apppasswords).
 
 ---
 
@@ -101,15 +108,17 @@ python main.py
 uvicorn src.web.app:app --reload
 ```
 
-Acesse **http://127.0.0.1:8000** no navegador.
+Acesse **http://127.0.0.1:8000** no navegador. Crie sua conta em **/register**,
+faça login e conecte seu e-mail em **Configurações**.
 
 | Página | Descrição |
 |--------|-----------|
+| **/register · /login** | Cadastro e acesso do cliente |
 | **Dashboard** | Cards de tickets, filtros, sincronização e resposta |
 | **Análises** | Gráficos por categoria, urgência, status e volume diário |
 | **Lembretes & Agenda** | Lembretes e respostas agendadas |
 | **Relatórios** | Exportação JSON/CSV e relatório imprimível |
-| **Configurações** | Conexão de e-mail, IA, WhatsApp e marca |
+| **Configurações** | Conexão de e-mail e WhatsApp (por cliente) |
 
 ### Executar testes
 
@@ -141,21 +150,22 @@ O projeto já vem pronto para o [Railway](https://railway.app) (Procfile +
 
 1. **Crie o projeto** no Railway a partir deste repositório
    (_New Project → Deploy from GitHub repo_).
-2. **Variáveis de ambiente** (aba _Variables_):
+2. **Variáveis de ambiente** (aba _Variables_) — apenas as **globais**:
    ```env
+   SECRET_KEY=use-um-segredo-forte-e-unico   # ex.: openssl rand -hex 32
    AI_API_KEY=sua-chave-gemini
    GEMINI_MODEL=gemini-3.1-flash-lite
-   EMAIL_USER=seu-email@gmail.com
-   EMAIL_PASS=sua-senha-de-app
    SYNC_INTERVAL_MINUTES=2
    ```
-   > A porta é injetada automaticamente pelo Railway (`PORT`) — não defina manualmente.
+   > As credenciais de e-mail **não** vão aqui — cada cliente conecta o próprio
+   > e-mail pela interface após o login. A porta é injetada pelo Railway
+   > (`PORT`) — não defina manualmente.
 3. **Banco de dados (recomendado):** adicione um **PostgreSQL** (_New → Database_).
    O Railway cria a variável `DATABASE_URL` automaticamente e o app a utiliza
    (o SQLite local é efêmero em container e se perde a cada deploy).
 4. **Deploy:** o Railway detecta o Python via Nixpacks, instala o
    `requirements.txt` e sobe com o `startCommand` do `railway.json`.
-5. Acesse a URL pública gerada e finalize a configuração em **Configurações**.
+5. Acesse a URL pública, crie sua conta em **/register** e conecte o e-mail.
 
 > O agendador (sincronização a cada 2 min) roda no mesmo processo web — ideal
 > para uma única instância. Para múltiplas réplicas, isole o scheduler em um
@@ -169,7 +179,9 @@ O projeto já vem pronto para o [Railway](https://railway.app) (Procfile +
 supportflow-ai/
 ├── main.py                     # Ponto de entrada (Uvicorn)
 ├── src/
-│   ├── config.py               # ⚙️ Configuração (DB + .env + padrões)
+│   ├── config.py               # ⚙️ Configuração global (DB + .env + padrões)
+│   ├── security.py             # 🔐 Hash de senha (bcrypt) + cripto de segredos (Fernet)
+│   ├── user_config.py          # ⚙️ Configuração por cliente (multi-tenant)
 │   ├── core/                   # 🧠 Lógica de negócio
 │   │   ├── ai_engine.py        # Integração Gemini (análise/reescrita/resumo)
 │   │   ├── automation.py       # Orquestrador (e-mail → IA → banco, respostas)
@@ -179,12 +191,13 @@ supportflow-ai/
 │   │   ├── reports.py          # Geração de relatórios (JSON/CSV/HTML)
 │   │   └── notifications.py    # Resumo de urgentes (WhatsApp — preparado)
 │   ├── data/                   # 💾 Camada de dados
-│   │   ├── db.py               # CRUD, filtros, analytics e configurações
-│   │   └── models.py           # Tickets, Anexos, Lembretes, Agendados, Settings
+│   │   ├── db.py               # CRUD escopado por cliente, analytics, migrações
+│   │   └── models.py           # Users, Settings, Tickets, Anexos, Lembretes, Agendados
 │   ├── web/                    # 🎨 Camada web (FastAPI)
-│   │   ├── app.py              # App factory + lifecycle + scheduler
-│   │   ├── routes/             # Rotas de páginas e API
-│   │   ├── templates/          # Templates Jinja2
+│   │   ├── app.py              # App factory + sessão + lifecycle + scheduler
+│   │   ├── auth.py             # Sessão e dependências de autenticação
+│   │   ├── routes/             # Rotas de auth, páginas e API
+│   │   ├── templates/          # Templates Jinja2 (inclui login/registro)
 │   │   └── static/             # CSS e JS
 │   ├── utils/logger.py         # 🔧 Logging
 │   └── exceptions.py           # Exceções customizadas

@@ -1,11 +1,15 @@
 """
 Roteador de páginas HTML (renderização server-side com Jinja2).
+
+Todas as páginas exigem autenticação; visitantes são redirecionados ao login.
+Os dados são sempre escopados ao cliente logado.
 """
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
-from src import config
 from src.data import db
+from src.user_config import UserConfig
+from src.web import auth
 
 router = APIRouter()
 
@@ -20,14 +24,19 @@ def _templates():
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request):
     """Painel principal com cards de tickets e filtros."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
+    cfg = UserConfig(user.id)
     return _templates().TemplateResponse(
         request,
         "dashboard.html",
         {
+            "user": user.to_dict(),
             "active": "dashboard",
-            "summary": db.analytics_summary(),
-            "email_ok": config.is_email_configured(),
-            "ai_ok": config.is_ai_configured(),
+            "summary": db.analytics_summary(user.id),
+            "email_ok": cfg.is_email_configured(),
         },
     )
 
@@ -35,36 +44,50 @@ def dashboard(request: Request):
 @router.get("/analytics", response_class=HTMLResponse)
 def analytics(request: Request):
     """Painel de análise com gráficos."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
     return _templates().TemplateResponse(
         request,
         "analytics.html",
-        {"active": "analytics", "summary": db.analytics_summary()},
+        {"user": user.to_dict(), "active": "analytics", "summary": db.analytics_summary(user.id)},
     )
 
 
 @router.get("/reminders", response_class=HTMLResponse)
 def reminders(request: Request):
     """Página de lembretes e respostas agendadas."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
     return _templates().TemplateResponse(
         request,
         "reminders.html",
         {
+            "user": user.to_dict(),
             "active": "reminders",
-            "reminders": db.list_reminders(),
-            "scheduled": db.list_scheduled_replies(),
+            "reminders": db.list_reminders(user.id),
+            "scheduled": db.list_scheduled_replies(user.id),
         },
     )
 
 
 @router.get("/settings", response_class=HTMLResponse)
 def settings(request: Request):
-    """Página de configurações (conexão de e-mail, IA, WhatsApp...)."""
+    """Página de configurações do cliente (conexão de e-mail, WhatsApp...)."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
+    from src import config
+
     return _templates().TemplateResponse(
         request,
         "settings.html",
         {
+            "user": user.to_dict(),
             "active": "settings",
-            "settings": config.public_settings(),
+            "settings": UserConfig(user.id).public_settings(),
             "providers": list(config.EMAIL_PROVIDERS.keys()),
         },
     )
@@ -73,8 +96,13 @@ def settings(request: Request):
 @router.get("/report", response_class=HTMLResponse)
 def report(request: Request):
     """Relatório imprimível (o navegador permite salvar/imprimir em PDF)."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+
     from src.core import reports
 
-    context = reports.report_context()
+    context = reports.report_context(user.id)
+    context["user"] = user.to_dict()
     context["active"] = "report"
     return _templates().TemplateResponse(request, "report.html", context)

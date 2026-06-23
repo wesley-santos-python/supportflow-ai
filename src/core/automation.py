@@ -1,19 +1,23 @@
 """
 Controlador de automação do SupportFlow AI.
 
-Orquestra o fluxo principal: e-mail -> IA -> banco de dados, registrando
-também os metadados de anexos. Centraliza o envio de respostas (manuais,
-sugeridas pela IA ou agendadas).
+Orquestra o fluxo principal de um cliente: e-mail -> IA -> banco de dados,
+registrando também os metadados de anexos. Centraliza o envio de respostas
+(manuais, sugeridas pela IA ou agendadas).
+
+Cada instância opera no contexto de um cliente (``user_id``), usando a conexão
+de e-mail daquele cliente. A IA (Gemini) é global, fornecida pelo provedor do
+SaaS via variáveis de ambiente.
 """
 import json
 from datetime import datetime
 from typing import List, Optional
 
-from src import config
 from src.core.ai_engine import AIService
 from src.core.email_service import EmailService
 from src.data import db
 from src.exceptions import EmailConnectionError, EmailSendError
+from src.user_config import UserConfig
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -21,45 +25,39 @@ logger = get_logger(__name__)
 
 class SupportController:
     """
-    Controlador principal que orquestra o fluxo de suporte.
+    Controlador que orquestra o fluxo de suporte de um cliente.
 
-    Responsável por:
-        - Buscar novos e-mails não lidos
-        - Enviar para análise da IA
-        - Salvar tickets e metadados de anexos no banco
-        - Marcar e-mails como lidos
-        - Enviar respostas (com anexos opcionais)
+    Args:
+        user_id: Cliente dono da operação. Usa a conexão de e-mail e as
+                 preferências desse cliente.
     """
 
-    def __init__(self) -> None:
-        """Inicializa o controlador com os serviços necessários."""
-        self.email_api = EmailService()
+    def __init__(self, user_id: int) -> None:
+        self.user_id = user_id
+        self.cfg = UserConfig(user_id)
+        self.email_api = EmailService(self.cfg)
         self.ai_api = AIService()
-        db.init_db()
-        logger.info("SupportController inicializado")
+        logger.info(f"SupportController inicializado (user={user_id})")
 
     def run_sync(self) -> int:
         """
-        Executa a sincronização de e-mails.
-
-        Busca e-mails não lidos, analisa com IA, salva tickets e anexos.
+        Sincroniza os e-mails do cliente: busca, analisa com IA e salva.
 
         Returns:
             Número de tickets processados.
         """
-        logger.info("Iniciando sincronização de e-mails...")
+        logger.info(f"Sincronizando e-mails (user={self.user_id})...")
 
         try:
             new_emails = self.email_api.fetch_unread_emails()
         except EmailConnectionError as e:
-            logger.error(f"Falha na conexão: {e.message}")
+            logger.error(f"Falha na conexão (user={self.user_id}): {e.message}")
             return 0
 
         if not new_emails:
-            logger.info("Nenhum ticket novo encontrado")
             return 0
 
-        auto_download = config.get_bool("AUTO_DOWNLOAD_ATTACHMENTS", False)
+        auto_download = self.cfg.get_bool("AUTO_DOWNLOAD_ATTACHMENTS", False)
         processed = 0
 
         for mail in new_emails:
@@ -71,6 +69,7 @@ class SupportController:
             analysis = self.ai_api.analyze_ticket(mail["body"])
 
             ticket_data = {
+                "user_id": self.user_id,
                 "uid": mail["id"],
                 "sender": mail["sender"],
                 "subject": mail["subject"],
@@ -88,9 +87,8 @@ class SupportController:
             self._register_attachments(ticket_id, mail.get("attachments", []), auto_download)
             self.email_api.mark_as_read(mail["id"])
             processed += 1
-            logger.debug(f"Ticket salvo: {mail['id']}")
 
-        logger.info(f"Sincronização concluída: {processed} tickets processados")
+        logger.info(f"Sincronização concluída (user={self.user_id}): {processed} tickets")
         return processed
 
     def send_ticket_reply(
@@ -99,18 +97,8 @@ class SupportController:
         body: str,
         attachments: Optional[List[str]] = None,
     ) -> bool:
-        """
-        Envia uma resposta a um ticket e o marca como respondido/resolvido.
-
-        Args:
-            ticket_id: ID do ticket a responder.
-            body: Texto da resposta.
-            attachments: Caminhos de arquivos a anexar.
-
-        Returns:
-            ``True`` se enviado com sucesso.
-        """
-        ticket = db.get_ticket_by_id(ticket_id)
+        """Envia uma resposta a um ticket do cliente e o marca como resolvido."""
+        ticket = db.get_ticket_by_id(ticket_id, self.user_id)
         if not ticket:
             logger.warning(f"Ticket {ticket_id} não encontrado para resposta")
             return False
@@ -122,17 +110,17 @@ class SupportController:
             logger.error(f"Falha ao responder ticket {ticket_id}: {e.message}")
             return False
 
-        db.mark_ticket_responded(ticket_id)
+        db.mark_ticket_responded(ticket_id, self.user_id)
         return True
 
     def process_scheduled_replies(self) -> int:
         """
-        Envia as respostas agendadas cujo horário já chegou.
+        Envia as respostas agendadas DESTE cliente cujo horário já chegou.
 
         Returns:
             Número de respostas enviadas com sucesso.
         """
-        due = db.due_scheduled_replies(datetime.now())
+        due = db.due_scheduled_replies(datetime.now(), user_id=self.user_id)
         sent = 0
         for reply in due:
             attachments = json.loads(reply.attachments_json) if reply.attachments_json else []
@@ -141,7 +129,7 @@ class SupportController:
                     reply.to_email, reply.subject, reply.body, attachments
                 )
                 db.update_scheduled_reply_status(reply.id, reply.STATUS_SENT)
-                db.mark_ticket_responded(reply.ticket_id)
+                db.mark_ticket_responded(reply.ticket_id, self.user_id)
                 sent += 1
                 logger.info(f"Resposta agendada #{reply.id} enviada")
             except EmailSendError as e:
@@ -166,4 +154,4 @@ class SupportController:
                 }
             )
             if auto_download and attachment_id:
-                attachment_manager.download_attachment(attachment_id)
+                attachment_manager.download_attachment(attachment_id, self.cfg)

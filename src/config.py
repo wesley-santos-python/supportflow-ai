@@ -25,6 +25,9 @@ logger = get_logger(__name__)
 DEFAULTS: Dict[str, str] = {
     "COMPANY_NAME": "Floatech",
     "APP_NAME": "SupportFlow AI",
+    # Chave para assinar sessões e derivar a criptografia de segredos.
+    # DEVE ser definida via variável de ambiente SECRET_KEY em produção.
+    "SECRET_KEY": "dev-insecure-secret-change-me",
     "EMAIL_PROVIDER": "gmail",
     "IMAP_SERVER": "imap.gmail.com",
     "SMTP_SERVER": "smtp.gmail.com",

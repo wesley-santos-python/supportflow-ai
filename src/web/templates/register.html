@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Criar conta · {{ app_name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-logo">◇</div>
+      <div>
+        <div class="brand-name">{{ app_name }}</div>
+        <div class="brand-by">by {{ company_name }}</div>
+      </div>
+    </div>
+    <h1>Criar conta</h1>
+    <p class="muted small">Comece a gerir seus e-mails de suporte com IA</p>
+
+    {% if erro %}<div class="auth-error">{{ erro }}</div>{% endif %}
+
+    <form method="post" action="/register" class="auth-form">
+      <label>Nome
+        <input type="text" name="name" required autofocus placeholder="Seu nome ou empresa" />
+      </label>
+      <label>E-mail
+        <input type="email" name="email" required placeholder="voce@empresa.com" />
+      </label>
+      <label>Senha
+        <input type="password" name="password" required minlength="6" placeholder="mínimo 6 caracteres" />
+      </label>
+      <button class="btn primary full" type="submit">Criar conta</button>
+    </form>
+
+    <p class="auth-foot">Já tem conta? <a href="/login">Entrar</a></p>
+  </div>
+</body>
+</html>

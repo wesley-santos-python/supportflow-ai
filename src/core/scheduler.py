@@ -1,9 +1,12 @@
 """
 Agendador de tarefas em background (APScheduler).
 
+Como o SaaS é multi-cliente, as tarefas iteram sobre os clientes que já têm
+e-mail configurado, executando o fluxo no contexto de cada um.
+
 Tarefas periódicas:
     - Sincronização de e-mails (intervalo configurável, padrão 2 minutos)
-    - Envio de respostas agendadas que venceram
+    - Envio de respostas agendadas vencidas
     - Disparo de lembretes vencidos
     - Resumo de e-mails urgentes (preparado para WhatsApp)
 
@@ -26,41 +29,44 @@ _scheduler: Optional[BackgroundScheduler] = None
 
 
 def sync_emails_job() -> None:
-    """Tarefa: sincroniza e-mails novos via IA."""
-    try:
-        processed = SupportController().run_sync()
-        if processed:
-            logger.info(f"[scheduler] {processed} tickets sincronizados")
-    except Exception as e:  # pragma: no cover - proteção do loop do scheduler
-        logger.error(f"[scheduler] erro na sincronização: {e}")
+    """Tarefa: sincroniza e-mails novos de cada cliente configurado."""
+    for user_id in db.users_with_email_configured():
+        try:
+            processed = SupportController(user_id).run_sync()
+            if processed:
+                logger.info(f"[scheduler] user={user_id}: {processed} tickets")
+        except Exception as e:  # pragma: no cover - protege o loop do scheduler
+            logger.error(f"[scheduler] erro na sincronização (user={user_id}): {e}")
 
 
 def scheduled_replies_job() -> None:
-    """Tarefa: envia respostas agendadas que já venceram."""
-    try:
-        sent = SupportController().process_scheduled_replies()
-        if sent:
-            logger.info(f"[scheduler] {sent} respostas agendadas enviadas")
-    except Exception as e:  # pragma: no cover
-        logger.error(f"[scheduler] erro nas respostas agendadas: {e}")
+    """Tarefa: envia respostas agendadas vencidas de cada cliente."""
+    for user_id in db.users_with_email_configured():
+        try:
+            sent = SupportController(user_id).process_scheduled_replies()
+            if sent:
+                logger.info(f"[scheduler] user={user_id}: {sent} respostas enviadas")
+        except Exception as e:  # pragma: no cover
+            logger.error(f"[scheduler] erro nas respostas agendadas (user={user_id}): {e}")
 
 
 def reminders_job() -> None:
     """Tarefa: dispara lembretes vencidos (registra e marca como notificado)."""
     try:
         for reminder in db.due_reminders(datetime.now()):
-            logger.info(f"🔔 Lembrete: {reminder.title}")
+            logger.info(f"🔔 Lembrete (user={reminder.user_id}): {reminder.title}")
             db.mark_reminder_notified(reminder.id)
     except Exception as e:  # pragma: no cover
         logger.error(f"[scheduler] erro nos lembretes: {e}")
 
 
 def urgent_summary_job() -> None:
-    """Tarefa: gera (e, se habilitado, envia) o resumo de e-mails urgentes."""
-    try:
-        WhatsAppNotifier().send_urgent_summary()
-    except Exception as e:  # pragma: no cover
-        logger.error(f"[scheduler] erro no resumo urgente: {e}")
+    """Tarefa: gera (e, se habilitado, envia) o resumo de urgentes por cliente."""
+    for user_id in db.users_with_email_configured():
+        try:
+            WhatsAppNotifier(user_id).send_urgent_summary()
+        except Exception as e:  # pragma: no cover
+            logger.error(f"[scheduler] erro no resumo urgente (user={user_id}): {e}")
 
 
 def start_scheduler() -> BackgroundScheduler:
@@ -68,9 +74,6 @@ def start_scheduler() -> BackgroundScheduler:
     Inicia o agendador com as tarefas configuradas.
 
     Idempotente: chamadas repetidas retornam a instância já em execução.
-
-    Returns:
-        A instância do :class:`BackgroundScheduler` em execução.
     """
     global _scheduler
     if _scheduler and _scheduler.running:

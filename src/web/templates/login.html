@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Entrar · {{ app_name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="brand-logo">◇</div>
+      <div>
+        <div class="brand-name">{{ app_name }}</div>
+        <div class="brand-by">by {{ company_name }}</div>
+      </div>
+    </div>
+    <h1>Entrar</h1>
+    <p class="muted small">Acesse sua central de suporte inteligente</p>
+
+    {% if erro %}<div class="auth-error">{{ erro }}</div>{% endif %}
+    {% if ok %}<div class="auth-ok">{{ ok }}</div>{% endif %}
+
+    <form method="post" action="/login" class="auth-form">
+      <label>E-mail
+        <input type="email" name="email" required autofocus placeholder="voce@empresa.com" />
+      </label>
+      <label>Senha
+        <input type="password" name="password" required placeholder="••••••••" />
+      </label>
+      <button class="btn primary full" type="submit">Entrar</button>
+    </form>
+
+    <p class="auth-foot">Não tem conta? <a href="/register">Criar conta</a></p>
+  </div>
+</body>
+</html>

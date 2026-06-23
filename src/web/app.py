@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 
 from src import config
 from src.core.scheduler import shutdown_scheduler, start_scheduler
@@ -55,11 +56,20 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Sessão assinada (cookie) para autenticação multi-cliente.
+    app.add_middleware(
+        SessionMiddleware,
+        secret_key=config.get("SECRET_KEY", "dev-insecure-secret-change-me"),
+        max_age=60 * 60 * 24 * 7,  # 7 dias
+        same_site="lax",
+    )
+
     app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
     # Import tardio evita ciclos durante a montagem.
-    from src.web.routes import api, pages
+    from src.web.routes import api, auth_routes, pages
 
+    app.include_router(auth_routes.router)
     app.include_router(pages.router)
     app.include_router(api.router, prefix="/api")
 

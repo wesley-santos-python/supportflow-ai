@@ -5,7 +5,7 @@
 <header class="page-head">
   <div>
     <h1>Configurações</h1>
-    <p class="muted">Conecte seu e-mail e a IA para começar a usar</p>
+    <p class="muted">Conecte seu e-mail para o sistema começar a processar seus tickets</p>
   </div>
 </header>
 
@@ -25,6 +25,7 @@
     <label>Senha de app
       <input name="email_pass" type="password" placeholder="{{ '•••••• (configurada)' if settings.EMAIL_PASS_set else 'senha de app' }}" />
     </label>
+    <p class="muted small">No Gmail, gere uma "Senha de app" em myaccount.google.com/apppasswords.</p>
     <div class="cols">
       <label>Servidor IMAP
         <input name="imap_server" value="{{ settings.IMAP_SERVER or '' }}" />
@@ -36,19 +37,6 @@
         <input name="smtp_port" value="{{ settings.SMTP_PORT or '587' }}" />
       </label>
     </div>
-  </div>
-
-  <div class="panel">
-    <h3>🤖 Inteligência Artificial</h3>
-    <label>API Key (Google Gemini)
-      <input name="ai_api_key" type="password" placeholder="{{ '•••••• (configurada)' if settings.AI_API_KEY_set else 'sua chave da API' }}" />
-    </label>
-    <label>Modelo
-      <input name="gemini_model" value="{{ settings.GEMINI_MODEL or 'gemini-3.1-flash-lite' }}" />
-    </label>
-    <label>Intervalo de sincronização (minutos)
-      <input name="sync_interval_minutes" type="number" min="1" value="{{ settings.SYNC_INTERVAL_MINUTES or '2' }}" />
-    </label>
     <label class="switch">
       <input type="checkbox" name="auto_download_attachments" {{ 'checked' if settings.AUTO_DOWNLOAD_ATTACHMENTS == 'true' }} />
       Baixar anexos automaticamente
@@ -57,7 +45,7 @@
 
   <div class="panel">
     <h3>📱 WhatsApp (resumo de urgentes)</h3>
-    <p class="muted small">Prepara o envio automático do resumo de e-mails urgentes ao responsável.</p>
+    <p class="muted small">Receba no seu WhatsApp um resumo dos e-mails urgentes.</p>
     <label class="switch">
       <input type="checkbox" name="whatsapp_enabled" {{ 'checked' if settings.WHATSAPP_ENABLED == 'true' }} />
       Ativar notificações por WhatsApp
@@ -65,13 +53,17 @@
     <label>Número de destino
       <input name="whatsapp_to" value="{{ settings.WHATSAPP_TO or '' }}" placeholder="+55 11 90000-0000" />
     </label>
+    <label>Token do provedor (opcional)
+      <input name="whatsapp_token" type="password" placeholder="{{ '•••••• (configurado)' if settings.WHATSAPP_TOKEN_set else 'token da API de WhatsApp' }}" />
+    </label>
   </div>
 
   <div class="panel">
-    <h3>🏢 Marca</h3>
-    <label>Nome da empresa
-      <input name="company_name" value="{{ settings.COMPANY_NAME or 'Floatech' }}" />
-    </label>
+    <h3>🤖 Inteligência Artificial</h3>
+    <p class="muted small">
+      A análise é feita com <strong>Gemini 3.1 Flash Lite</strong>, fornecido pela
+      plataforma. Você não precisa configurar nada — basta conectar seu e-mail.
+    </p>
   </div>
 
   <div class="settings-actions">

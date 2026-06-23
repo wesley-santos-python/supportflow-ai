@@ -4,13 +4,18 @@ Configuração e funções de acesso ao banco de dados.
 Utiliza SQLAlchemy como ORM. SQLite por padrão, mas a ``DATABASE_URL`` pode
 apontar para MySQL/PostgreSQL sem alterações no restante do código.
 
-O módulo expõe funções utilitárias agrupadas por domínio:
+A aplicação é **multi-cliente**: a maioria das funções aceita um ``user_id``
+para escopar os dados ao cliente autenticado. Quando ``user_id`` é ``None``,
+não há filtro por cliente (uso administrativo/legado/testes).
 
+Domínios:
+    - Usuários e autenticação
+    - Configurações por usuário (key/value)
     - Tickets (CRUD + filtros)
     - Anexos
     - Lembretes
     - Respostas agendadas
-    - Configurações (key/value)
+    - Configurações globais (key/value)
     - Métricas/analytics para os gráficos do dashboard
 """
 import os
@@ -18,7 +23,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional
 
-from sqlalchemy import case, create_engine, func
+from sqlalchemy import case, create_engine, func, text
 from sqlalchemy.orm import Session, selectinload, sessionmaker
 
 from src.data.models import (
@@ -28,6 +33,8 @@ from src.data.models import (
     Reminder,
     ScheduledReply,
     Ticket,
+    User,
+    UserSetting,
 )
 from src.utils.logger import get_logger
 
@@ -55,20 +62,35 @@ _URGENCY_ORDER = case(
 
 
 def init_db() -> None:
-    """Cria todas as tabelas no banco de dados se não existirem."""
+    """Cria as tabelas (se não existirem) e aplica migrações leves."""
     Base.metadata.create_all(bind=engine)
+    _run_migrations()
     logger.debug("Banco de dados inicializado")
+
+
+def _run_migrations() -> None:
+    """
+    Migração best-effort: adiciona a coluna ``user_id`` às tabelas de negócio
+    em bancos criados antes do suporte multi-cliente. Idempotente e tolerante.
+    """
+    statements = [
+        "ALTER TABLE tickets ADD COLUMN user_id INTEGER",
+        "ALTER TABLE reminders ADD COLUMN user_id INTEGER",
+        "ALTER TABLE scheduled_replies ADD COLUMN user_id INTEGER",
+    ]
+    for stmt in statements:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(stmt))
+            logger.info(f"Migração aplicada: {stmt}")
+        except Exception:
+            # Coluna já existe (caso comum) — ignora silenciosamente.
+            pass
 
 
 @contextmanager
 def session_scope() -> Iterator[Session]:
-    """
-    Context manager que fornece uma sessão com commit/rollback automático.
-
-    Uso:
-        with session_scope() as db:
-            db.add(obj)
-    """
+    """Context manager com commit/rollback automático."""
     db = SessionLocal()
     try:
         yield db
@@ -81,20 +103,138 @@ def session_scope() -> Iterator[Session]:
 
 
 # ---------------------------------------------------------------------------
+# Usuários / autenticação
+# ---------------------------------------------------------------------------
+def create_user(name: str, email: str, password_hash: str) -> Optional[int]:
+    """Cria um usuário. Retorna o ID ou ``None`` se o e-mail já existir."""
+    db = SessionLocal()
+    try:
+        user = User(name=name, email=email.lower().strip(), password_hash=password_hash)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user.id
+    except Exception as e:
+        logger.warning(f"Não foi possível criar usuário '{email}': {e}")
+        db.rollback()
+        return None
+    finally:
+        db.close()
+
+
+def get_user_by_email(email: str) -> Optional[User]:
+    """Retorna um usuário pelo e-mail (ou ``None``)."""
+    db = SessionLocal()
+    try:
+        return db.query(User).filter(User.email == email.lower().strip()).first()
+    finally:
+        db.close()
+
+
+def get_user_by_id(user_id: int) -> Optional[User]:
+    """Retorna um usuário pelo ID (ou ``None``)."""
+    db = SessionLocal()
+    try:
+        return db.query(User).filter(User.id == user_id).first()
+    finally:
+        db.close()
+
+
+def count_users() -> int:
+    """Conta o total de usuários cadastrados."""
+    db = SessionLocal()
+    try:
+        return db.query(func.count(User.id)).scalar() or 0
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
+# Configurações por usuário (key/value)
+# ---------------------------------------------------------------------------
+def get_user_setting(user_id: int, key: str) -> Optional[str]:
+    """Retorna uma configuração do usuário (ou ``None``)."""
+    db = SessionLocal()
+    try:
+        row = (
+            db.query(UserSetting)
+            .filter(UserSetting.user_id == user_id, UserSetting.key == key)
+            .first()
+        )
+        return row.value if row else None
+    finally:
+        db.close()
+
+
+def get_user_settings_dict(user_id: int) -> Dict[str, str]:
+    """Retorna todas as configurações do usuário como dicionário."""
+    db = SessionLocal()
+    try:
+        rows = db.query(UserSetting).filter(UserSetting.user_id == user_id).all()
+        return {r.key: r.value for r in rows}
+    finally:
+        db.close()
+
+
+def set_user_setting(user_id: int, key: str, value: str) -> None:
+    """Cria ou atualiza uma configuração do usuário."""
+    db = SessionLocal()
+    try:
+        row = (
+            db.query(UserSetting)
+            .filter(UserSetting.user_id == user_id, UserSetting.key == key)
+            .first()
+        )
+        if row:
+            row.value = value
+        else:
+            db.add(UserSetting(user_id=user_id, key=key, value=value))
+        db.commit()
+    except Exception as e:
+        logger.error(f"Erro ao salvar configuração '{key}' do usuário {user_id}: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+
+def users_with_email_configured() -> List[int]:
+    """Retorna os IDs de usuários que já configuraram o e-mail (para o scheduler)."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(UserSetting.user_id)
+            .filter(UserSetting.key == "EMAIL_USER", UserSetting.value.isnot(None), UserSetting.value != "")
+            .all()
+        )
+        return [r[0] for r in rows]
+    finally:
+        db.close()
+
+
+# ---------------------------------------------------------------------------
 # Tickets
 # ---------------------------------------------------------------------------
 def save_ticket(ticket_data: dict) -> Optional[int]:
     """
-    Salva um novo ticket no banco de dados.
-
-    Args:
-        ticket_data: Dicionário com os dados do ticket.
+    Salva um novo ticket, evitando duplicidade por (``user_id``, ``uid``).
 
     Returns:
-        O ``id`` do ticket criado, ou ``None`` em caso de falha/duplicidade.
+        O ``id`` do ticket criado, ou ``None`` em caso de duplicidade/falha.
     """
     db = SessionLocal()
     try:
+        existing = (
+            db.query(Ticket.id)
+            .filter(
+                Ticket.uid == ticket_data.get("uid"),
+                Ticket.user_id == ticket_data.get("user_id"),
+            )
+            .first()
+        )
+        if existing:
+            logger.debug(f"Ticket duplicado ignorado: {ticket_data.get('uid')}")
+            return None
+
         new_ticket = Ticket(**ticket_data)
         db.add(new_ticket)
         db.commit()
@@ -110,26 +250,18 @@ def save_ticket(ticket_data: dict) -> Optional[int]:
 
 
 def query_tickets(
+    user_id: Optional[int] = None,
     categoria: Optional[str] = None,
     urgencia: Optional[str] = None,
     status: Optional[str] = None,
     search: Optional[str] = None,
 ) -> List[Ticket]:
-    """
-    Consulta tickets aplicando filtros opcionais.
-
-    Args:
-        categoria: Filtra por categoria (ignora "Todos"/None).
-        urgencia: Filtra por urgência.
-        status: Filtra por status.
-        search: Busca textual em assunto, remetente e resumo.
-
-    Returns:
-        Lista de tickets ordenados por urgência e data (mais recentes primeiro).
-    """
+    """Consulta tickets do usuário aplicando filtros opcionais."""
     db = SessionLocal()
     try:
         query = db.query(Ticket).options(selectinload(Ticket.attachments))
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
         if categoria and categoria != "Todos":
             query = query.filter(Ticket.categoria == categoria)
         if urgencia and urgencia != "Todos":
@@ -148,97 +280,60 @@ def query_tickets(
         db.close()
 
 
-def get_all_tickets() -> List[Ticket]:
-    """Retorna todos os tickets ordenados do mais recente ao mais antigo."""
+def get_all_tickets(user_id: Optional[int] = None) -> List[Ticket]:
+    """Retorna os tickets do usuário (mais recentes primeiro)."""
     db = SessionLocal()
     try:
-        return (
-            db.query(Ticket)
-            .options(selectinload(Ticket.attachments))
-            .order_by(Ticket.created_at.desc())
-            .all()
+        query = db.query(Ticket).options(selectinload(Ticket.attachments))
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
+        return query.order_by(Ticket.created_at.desc()).all()
+    finally:
+        db.close()
+
+
+def get_ticket_by_id(ticket_id: int, user_id: Optional[int] = None) -> Optional[Ticket]:
+    """Retorna um ticket pelo ID, garantindo a propriedade quando ``user_id`` é dado."""
+    db = SessionLocal()
+    try:
+        query = db.query(Ticket).options(selectinload(Ticket.attachments)).filter(
+            Ticket.id == ticket_id
         )
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
+        return query.first()
     finally:
         db.close()
 
 
-def get_ticket_by_id(ticket_id: int) -> Optional[Ticket]:
-    """Retorna um ticket específico pelo ID (ou ``None``)."""
-    db = SessionLocal()
-    try:
-        return (
-            db.query(Ticket)
-            .options(selectinload(Ticket.attachments))
-            .filter(Ticket.id == ticket_id)
-            .first()
-        )
-    finally:
-        db.close()
+def update_ticket_status(ticket_id: int, new_status: str, user_id: Optional[int] = None) -> bool:
+    """Atualiza o status de um ticket do usuário."""
+    return _update_ticket(ticket_id, user_id, status=new_status)
 
 
-def update_ticket_status(ticket_id: int, new_status: str) -> bool:
-    """Atualiza o status de um ticket. Retorna ``True`` se atualizado."""
-    db = SessionLocal()
-    try:
-        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
-        if ticket:
-            ticket.status = new_status
-            db.commit()
-            logger.info(f"Ticket {ticket_id} atualizado para: {new_status}")
-            return True
-        logger.warning(f"Ticket {ticket_id} não encontrado")
-        return False
-    except Exception as e:
-        logger.error(f"Erro ao atualizar ticket: {e}")
-        db.rollback()
-        return False
-    finally:
-        db.close()
-
-
-def update_ticket_suggestion(ticket_id: int, resposta_sugerida: str) -> bool:
+def update_ticket_suggestion(
+    ticket_id: int, resposta_sugerida: str, user_id: Optional[int] = None
+) -> bool:
     """Atualiza a resposta sugerida de um ticket (ex.: após reescrita por IA)."""
+    return _update_ticket(ticket_id, user_id, resposta_sugerida=resposta_sugerida)
+
+
+def mark_ticket_responded(ticket_id: int, user_id: Optional[int] = None) -> bool:
+    """Marca um ticket como respondido e o move para 'Resolvido'."""
+    return _update_ticket(
+        ticket_id,
+        user_id,
+        response_sent=True,
+        responded_at=datetime.now(),
+        status="Resolvido",
+    )
+
+
+def delete_ticket(ticket_id: int, user_id: Optional[int] = None) -> bool:
+    """Remove um ticket (e seus anexos) do usuário."""
     db = SessionLocal()
     try:
-        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
-        if not ticket:
-            return False
-        ticket.resposta_sugerida = resposta_sugerida
-        db.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Erro ao atualizar sugestão: {e}")
-        db.rollback()
-        return False
-    finally:
-        db.close()
-
-
-def mark_ticket_responded(ticket_id: int) -> bool:
-    """Marca um ticket como respondido e atualiza o status para 'Resolvido'."""
-    db = SessionLocal()
-    try:
-        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
-        if not ticket:
-            return False
-        ticket.response_sent = True
-        ticket.responded_at = datetime.now()
-        ticket.status = "Resolvido"
-        db.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Erro ao marcar ticket respondido: {e}")
-        db.rollback()
-        return False
-    finally:
-        db.close()
-
-
-def delete_ticket(ticket_id: int) -> bool:
-    """Remove um ticket (e seus anexos) do banco de dados."""
-    db = SessionLocal()
-    try:
-        ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+        ticket = _ticket_query(db, ticket_id, user_id).first()
         if ticket:
             db.delete(ticket)
             db.commit()
@@ -247,6 +342,34 @@ def delete_ticket(ticket_id: int) -> bool:
         return False
     except Exception as e:
         logger.error(f"Erro ao remover ticket: {e}")
+        db.rollback()
+        return False
+    finally:
+        db.close()
+
+
+def _ticket_query(db: Session, ticket_id: int, user_id: Optional[int]):
+    """Helper: query de um ticket com escopo de propriedade."""
+    query = db.query(Ticket).filter(Ticket.id == ticket_id)
+    if user_id is not None:
+        query = query.filter(Ticket.user_id == user_id)
+    return query
+
+
+def _update_ticket(ticket_id: int, user_id: Optional[int], **fields) -> bool:
+    """Helper genérico para atualizar campos de um ticket com escopo."""
+    db = SessionLocal()
+    try:
+        ticket = _ticket_query(db, ticket_id, user_id).first()
+        if not ticket:
+            logger.warning(f"Ticket {ticket_id} não encontrado para atualização")
+            return False
+        for key, value in fields.items():
+            setattr(ticket, key, value)
+        db.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Erro ao atualizar ticket {ticket_id}: {e}")
         db.rollback()
         return False
     finally:
@@ -321,11 +444,13 @@ def create_reminder(data: dict) -> Optional[int]:
         db.close()
 
 
-def list_reminders(only_pending: bool = False) -> List[Reminder]:
-    """Lista lembretes ordenados por data de disparo."""
+def list_reminders(user_id: Optional[int] = None, only_pending: bool = False) -> List[Reminder]:
+    """Lista lembretes do usuário ordenados por data de disparo."""
     db = SessionLocal()
     try:
         query = db.query(Reminder)
+        if user_id is not None:
+            query = query.filter(Reminder.user_id == user_id)
         if only_pending:
             query = query.filter(Reminder.done.is_(False))
         return query.order_by(Reminder.remind_at.asc()).all()
@@ -334,7 +459,7 @@ def list_reminders(only_pending: bool = False) -> List[Reminder]:
 
 
 def due_reminders(reference: Optional[datetime] = None) -> List[Reminder]:
-    """Retorna lembretes vencidos ainda não notificados."""
+    """Retorna lembretes vencidos ainda não notificados (todos os usuários)."""
     reference = reference or datetime.now()
     db = SessionLocal()
     try:
@@ -351,11 +476,13 @@ def due_reminders(reference: Optional[datetime] = None) -> List[Reminder]:
         db.close()
 
 
-def set_reminder_done(reminder_id: int, done: bool = True) -> bool:
-    """Marca um lembrete como concluído (ou reabre)."""
+def set_reminder_done(reminder_id: int, done: bool = True, user_id: Optional[int] = None) -> bool:
+    """Marca um lembrete do usuário como concluído (ou reabre)."""
     db = SessionLocal()
     try:
-        reminder = db.query(Reminder).filter(Reminder.id == reminder_id).first()
+        reminder = _scoped(db.query(Reminder), Reminder, user_id).filter(
+            Reminder.id == reminder_id
+        ).first()
         if not reminder:
             return False
         reminder.done = done
@@ -384,11 +511,13 @@ def mark_reminder_notified(reminder_id: int) -> None:
         db.close()
 
 
-def delete_reminder(reminder_id: int) -> bool:
-    """Remove um lembrete."""
+def delete_reminder(reminder_id: int, user_id: Optional[int] = None) -> bool:
+    """Remove um lembrete do usuário."""
     db = SessionLocal()
     try:
-        reminder = db.query(Reminder).filter(Reminder.id == reminder_id).first()
+        reminder = _scoped(db.query(Reminder), Reminder, user_id).filter(
+            Reminder.id == reminder_id
+        ).first()
         if not reminder:
             return False
         db.delete(reminder)
@@ -418,11 +547,15 @@ def create_scheduled_reply(data: dict) -> Optional[int]:
         db.close()
 
 
-def list_scheduled_replies(status: Optional[str] = None) -> List[ScheduledReply]:
-    """Lista respostas agendadas, opcionalmente filtrando por status."""
+def list_scheduled_replies(
+    user_id: Optional[int] = None, status: Optional[str] = None
+) -> List[ScheduledReply]:
+    """Lista respostas agendadas do usuário, opcionalmente filtrando por status."""
     db = SessionLocal()
     try:
         query = db.query(ScheduledReply)
+        if user_id is not None:
+            query = query.filter(ScheduledReply.user_id == user_id)
         if status:
             query = query.filter(ScheduledReply.status == status)
         return query.order_by(ScheduledReply.scheduled_for.asc()).all()
@@ -430,19 +563,20 @@ def list_scheduled_replies(status: Optional[str] = None) -> List[ScheduledReply]
         db.close()
 
 
-def due_scheduled_replies(reference: Optional[datetime] = None) -> List[ScheduledReply]:
+def due_scheduled_replies(
+    reference: Optional[datetime] = None, user_id: Optional[int] = None
+) -> List[ScheduledReply]:
     """Retorna respostas agendadas pendentes cujo horário já chegou."""
     reference = reference or datetime.now()
     db = SessionLocal()
     try:
-        return (
-            db.query(ScheduledReply)
-            .filter(
-                ScheduledReply.status == ScheduledReply.STATUS_PENDING,
-                ScheduledReply.scheduled_for <= reference,
-            )
-            .all()
+        query = db.query(ScheduledReply).filter(
+            ScheduledReply.status == ScheduledReply.STATUS_PENDING,
+            ScheduledReply.scheduled_for <= reference,
         )
+        if user_id is not None:
+            query = query.filter(ScheduledReply.user_id == user_id)
+        return query.all()
     finally:
         db.close()
 
@@ -471,10 +605,10 @@ def update_scheduled_reply_status(
 
 
 # ---------------------------------------------------------------------------
-# Configurações (key/value)
+# Configurações globais (key/value)
 # ---------------------------------------------------------------------------
 def get_setting(key: str) -> Optional[str]:
-    """Retorna o valor de uma configuração ou ``None``."""
+    """Retorna o valor de uma configuração global ou ``None``."""
     db = SessionLocal()
     try:
         setting = db.query(AppSetting).filter(AppSetting.key == key).first()
@@ -484,7 +618,7 @@ def get_setting(key: str) -> Optional[str]:
 
 
 def set_setting(key: str, value: str) -> None:
-    """Cria ou atualiza uma configuração key/value."""
+    """Cria ou atualiza uma configuração global key/value."""
     db = SessionLocal()
     try:
         setting = db.query(AppSetting).filter(AppSetting.key == key).first()
@@ -503,34 +637,29 @@ def set_setting(key: str, value: str) -> None:
 # ---------------------------------------------------------------------------
 # Analytics / métricas para os gráficos
 # ---------------------------------------------------------------------------
-def analytics_summary() -> Dict[str, Any]:
-    """
-    Agrega métricas dos tickets para alimentar o painel de análise.
-
-    Returns:
-        Dicionário com:
-            - total, pendentes, resolvidos, urgentes
-            - by_category, by_urgency, by_status (dict label->contagem)
-            - by_day (últimos registros agrupados por dia)
-    """
+def analytics_summary(user_id: Optional[int] = None) -> Dict[str, Any]:
+    """Agrega métricas dos tickets do usuário para o painel de análise."""
     db = SessionLocal()
     try:
-        total = db.query(func.count(Ticket.id)).scalar() or 0
+        base = db.query(Ticket)
+        if user_id is not None:
+            base = base.filter(Ticket.user_id == user_id)
 
-        by_category = _count_by(db, Ticket.categoria)
-        by_urgency = _count_by(db, Ticket.urgencia)
-        by_status = _count_by(db, Ticket.status)
+        total = base.with_entities(func.count(Ticket.id)).scalar() or 0
+        by_category = _count_by(db, Ticket.categoria, user_id)
+        by_urgency = _count_by(db, Ticket.urgencia, user_id)
+        by_status = _count_by(db, Ticket.status, user_id)
 
         # Série temporal por dia (compatível com SQLite e demais bancos).
-        day_expr = func.strftime("%Y-%m-%d", Ticket.created_at) if DATABASE_URL.startswith(
-            "sqlite"
-        ) else func.date(Ticket.created_at)
-        by_day_rows = (
-            db.query(day_expr.label("dia"), func.count(Ticket.id))
-            .group_by("dia")
-            .order_by("dia")
-            .all()
+        day_expr = (
+            func.strftime("%Y-%m-%d", Ticket.created_at)
+            if DATABASE_URL.startswith("sqlite")
+            else func.date(Ticket.created_at)
         )
+        day_query = db.query(day_expr.label("dia"), func.count(Ticket.id))
+        if user_id is not None:
+            day_query = day_query.filter(Ticket.user_id == user_id)
+        by_day_rows = day_query.group_by("dia").order_by("dia").all()
         by_day = {str(row[0]): row[1] for row in by_day_rows if row[0]}
 
         return {
@@ -548,23 +677,33 @@ def analytics_summary() -> Dict[str, Any]:
         db.close()
 
 
-def get_urgent_tickets(limit: int = 10) -> List[Ticket]:
-    """Retorna tickets urgentes não resolvidos (para resumo/WhatsApp)."""
+def get_urgent_tickets(user_id: Optional[int] = None, limit: int = 10) -> List[Ticket]:
+    """Retorna tickets urgentes não resolvidos do usuário (para resumo/WhatsApp)."""
     db = SessionLocal()
     try:
-        return (
+        query = (
             db.query(Ticket)
             .options(selectinload(Ticket.attachments))
             .filter(Ticket.urgencia == "Alta", Ticket.status != "Resolvido")
-            .order_by(Ticket.created_at.desc())
-            .limit(limit)
-            .all()
         )
+        if user_id is not None:
+            query = query.filter(Ticket.user_id == user_id)
+        return query.order_by(Ticket.created_at.desc()).limit(limit).all()
     finally:
         db.close()
 
 
-def _count_by(db: Session, column) -> Dict[str, int]:
-    """Helper: conta tickets agrupados por uma coluna."""
-    rows = db.query(column, func.count(Ticket.id)).group_by(column).all()
+def _count_by(db: Session, column, user_id: Optional[int]) -> Dict[str, int]:
+    """Helper: conta tickets agrupados por uma coluna, com escopo opcional."""
+    query = db.query(column, func.count(Ticket.id))
+    if user_id is not None:
+        query = query.filter(Ticket.user_id == user_id)
+    rows = query.group_by(column).all()
     return {(label or "Outros"): count for label, count in rows}
+
+
+def _scoped(query, model, user_id: Optional[int]):
+    """Aplica filtro de propriedade por ``user_id`` quando informado."""
+    if user_id is not None:
+        return query.filter(model.user_id == user_id)
+    return query

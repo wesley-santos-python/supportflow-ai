@@ -11,11 +11,12 @@ automático está habilitado nas configurações).
 """
 import os
 import re
-from typing import Optional
+from typing import Any, Optional
 
 from src import config
 from src.core.email_service import EmailService
 from src.data import db
+from src.user_config import UserConfig
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -36,12 +37,14 @@ def sanitize(name: str) -> str:
     return _SAFE_NAME.sub("_", name) or "arquivo"
 
 
-def download_attachment(attachment_id: int) -> Optional[str]:
+def download_attachment(attachment_id: int, cfg: Any = None) -> Optional[str]:
     """
-    Baixa um anexo do servidor de e-mail e o grava de forma organizada.
+    Baixa um anexo do servidor de e-mail do cliente e o grava de forma organizada.
 
     Args:
         attachment_id: ID do anexo registrado no banco.
+        cfg: Provedor de configuração (``UserConfig``) do cliente dono do anexo.
+             Se ``None``, é resolvido a partir do ``user_id`` do ticket.
 
     Returns:
         Caminho local do arquivo salvo, ou ``None`` em caso de falha.
@@ -58,7 +61,9 @@ def download_attachment(attachment_id: int) -> Optional[str]:
     if not ticket:
         return None
 
-    payload = EmailService().download_attachment(ticket.uid, attachment.filename)
+    if cfg is None and ticket.user_id is not None:
+        cfg = UserConfig(ticket.user_id)
+    payload = EmailService(cfg).download_attachment(ticket.uid, attachment.filename)
     if payload is None:
         return None
 

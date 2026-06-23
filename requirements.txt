@@ -7,6 +7,11 @@ python-multipart>=0.0.9
 # --- Agendamento em background ---
 apscheduler>=3.10.0
 
+# --- Autenticação / segurança (login multi-cliente) ---
+bcrypt>=4.1.0
+cryptography>=42.0.0
+itsdangerous>=2.1.0
+
 # --- IA / E-mail / Dados ---
 # SDK novo do Gemini (import: `from google import genai`)
 google-genai>=1.0.0

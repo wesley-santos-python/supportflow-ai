@@ -3,12 +3,18 @@ Modelos ORM do SupportFlow AI.
 
 Define a estrutura das tabelas do banco de dados usando SQLAlchemy.
 
+A aplicação é multi-cliente (multi-tenant): cada registro de negócio é
+vinculado a um ``user_id``, de modo que cada cliente acessa apenas os seus
+próprios dados.
+
 Tabelas:
+    - users: contas/clientes do SaaS (login por e-mail+senha)
+    - user_settings: configurações por cliente (e-mail, WhatsApp, etc.)
     - tickets: e-mails de suporte processados pela IA
     - attachments: anexos vinculados a um ticket
     - reminders: lembretes/follow-ups criados pelo operador
     - scheduled_replies: respostas agendadas para envio futuro
-    - app_settings: configurações da aplicação (key/value)
+    - app_settings: configurações globais da aplicação (key/value)
 """
 from datetime import datetime
 from typing import Optional
@@ -21,10 +27,68 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
+
+
+class User(Base):
+    """
+    Conta de cliente do SaaS.
+
+    Cada cliente faz login com e-mail + senha (hash bcrypt) e enxerga apenas
+    os próprios tickets, lembretes, agendamentos e configurações.
+
+    Attributes:
+        id: Chave primária.
+        name: Nome de exibição.
+        email: E-mail de login (único).
+        password_hash: Hash bcrypt da senha.
+        is_active: Conta ativa.
+        created_at: Data de cadastro.
+    """
+
+    __tablename__ = "users"
+
+    id: int = Column(Integer, primary_key=True, index=True)
+    name: str = Column(String(255), nullable=False)
+    email: str = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash: str = Column(String(255), nullable=False)
+    is_active: bool = Column(Boolean, default=True)
+    created_at: datetime = Column(DateTime, default=datetime.now)
+
+    def to_dict(self) -> dict:
+        """Converte o usuário para dicionário (sem expor o hash)."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "is_active": self.is_active,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class UserSetting(Base):
+    """
+    Configuração por cliente, no formato chave/valor.
+
+    Guarda a conexão de e-mail (IMAP/SMTP), preferências e WhatsApp de cada
+    cliente. Segredos (ex.: senha de e-mail) são armazenados já criptografados.
+
+    Attributes:
+        user_id: FK para o usuário dono da configuração.
+        key: Nome da configuração.
+        value: Valor (texto; criptografado quando sensível).
+    """
+
+    __tablename__ = "user_settings"
+
+    user_id: int = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    key: str = Column(String(100), primary_key=True)
+    value: Optional[str] = Column(Text)
+    updated_at: datetime = Column(DateTime, default=datetime.now, onupdate=datetime.now)
 
 
 class Ticket(Base):
@@ -52,9 +116,14 @@ class Ticket(Base):
     """
 
     __tablename__ = "tickets"
+    # UID é único por cliente (caixas de e-mail diferentes podem repetir UIDs).
+    __table_args__ = (
+        UniqueConstraint("user_id", "uid", name="uq_ticket_user_uid"),
+    )
 
     id: int = Column(Integer, primary_key=True, index=True)
-    uid: str = Column(String(255), unique=True, nullable=False, index=True)
+    user_id: Optional[int] = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    uid: str = Column(String(255), nullable=False, index=True)
     sender: str = Column(String(255), nullable=False)
     subject: str = Column(String(500))
     body: Optional[str] = Column(Text)
@@ -164,6 +233,7 @@ class Reminder(Base):
     __tablename__ = "reminders"
 
     id: int = Column(Integer, primary_key=True, index=True)
+    user_id: Optional[int] = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     ticket_id: Optional[int] = Column(Integer, ForeignKey("tickets.id"), nullable=True, index=True)
     title: str = Column(String(255), nullable=False)
     note: Optional[str] = Column(Text)
@@ -216,6 +286,7 @@ class ScheduledReply(Base):
     STATUS_CANCELED = "cancelado"
 
     id: int = Column(Integer, primary_key=True, index=True)
+    user_id: Optional[int] = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     ticket_id: int = Column(Integer, ForeignKey("tickets.id"), nullable=False, index=True)
     to_email: str = Column(String(255), nullable=False)
     subject: str = Column(String(500))

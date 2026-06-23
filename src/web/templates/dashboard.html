@@ -13,10 +13,10 @@
   </div>
 </header>
 
-{% if not email_ok or not ai_ok %}
+{% if not email_ok %}
 <div class="alert">
-  ⚠️ Configure {% if not email_ok %}o e-mail{% endif %}{% if not email_ok and not ai_ok %} e {% endif %}{% if not ai_ok %}a chave da IA{% endif %}
-  para começar. <a href="/settings">Ir para configurações →</a>
+  ⚠️ Conecte seu e-mail para o sistema começar a processar seus tickets.
+  <a href="/settings">Ir para configurações →</a>
 </div>
 {% endif %}
 

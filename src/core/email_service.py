@@ -7,8 +7,9 @@ Responsável por:
     - Baixar o conteúdo de um anexo específico sob demanda
     - Enviar respostas (com anexos opcionais) via SMTP
 
-As credenciais e servidores são resolvidos via :mod:`src.config`, podendo ser
-configurados pela interface web ou por variáveis de ambiente.
+As credenciais e servidores vêm de um provedor de configuração — pode ser o
+módulo global :mod:`src.config` (env/variáveis) ou uma
+:class:`~src.user_config.UserConfig` escopada a um cliente (multi-tenant).
 """
 import smtplib
 from email.message import EmailMessage
@@ -31,13 +32,20 @@ class EmailService:
     configurando os servidores manualmente.
     """
 
-    def __init__(self) -> None:
-        """Carrega credenciais e servidores a partir da configuração."""
-        self.user = config.get("EMAIL_USER")
-        self.password = config.get("EMAIL_PASS")
-        self.imap_server = config.get("IMAP_SERVER", "imap.gmail.com")
-        self.smtp_server = config.get("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = config.get_int("SMTP_PORT", 587)
+    def __init__(self, cfg: Any = None) -> None:
+        """
+        Carrega credenciais e servidores a partir de um provedor de config.
+
+        Args:
+            cfg: Provedor com interface ``get``/``get_int`` (ex.: ``UserConfig``).
+                 Se ``None``, usa a configuração global (env) — modo single-tenant.
+        """
+        cfg = cfg or config
+        self.user = cfg.get("EMAIL_USER")
+        self.password = cfg.get("EMAIL_PASS")
+        self.imap_server = cfg.get("IMAP_SERVER", "imap.gmail.com")
+        self.smtp_server = cfg.get("SMTP_SERVER", "smtp.gmail.com")
+        self.smtp_port = cfg.get_int("SMTP_PORT", 587)
 
         if not self.user or not self.password:
             logger.warning("Credenciais de e-mail não configuradas")

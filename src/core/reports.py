@@ -86,16 +86,19 @@ def _ticket_row(ticket: Ticket) -> dict:
     return {field: row.get(field, "") for field in _FIELDS}
 
 
-def report_context() -> dict:
+def report_context(user_id=None) -> dict:
     """
-    Monta o contexto de dados para o relatório HTML imprimível.
+    Monta o contexto de dados para o relatório HTML imprimível do cliente.
+
+    Args:
+        user_id: Cliente dono do relatório (escopa os dados).
 
     Returns:
         Dicionário com métricas agregadas e a lista de tickets.
     """
     return {
         "generated_at": datetime.now().strftime("%d/%m/%Y %H:%M"),
-        "summary": db.analytics_summary(),
-        "tickets": db.get_all_tickets(),
+        "summary": db.analytics_summary(user_id),
+        "tickets": db.get_all_tickets(user_id),
         "company": config.get("COMPANY_NAME", "Floatech"),
     }
