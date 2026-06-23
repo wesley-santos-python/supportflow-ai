@@ -77,6 +77,15 @@ def create_app() -> FastAPI:
     # Compressão das respostas (HTML/JSON/CSS) — páginas mais leves e rápidas.
     app.add_middleware(GZipMiddleware, minimum_size=600)
 
+    @app.middleware("http")
+    async def _cache_static(request, call_next):
+        """Cache no navegador para os arquivos estáticos (acelera e economiza banda)."""
+        response = await call_next(request)
+        if request.url.path.startswith("/static/"):
+            # Fresco por 5 min; depois serve do cache enquanto revalida (ETag).
+            response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=86400"
+        return response
+
     app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
     @app.get("/healthz", include_in_schema=False)

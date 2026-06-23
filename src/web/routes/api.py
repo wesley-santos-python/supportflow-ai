@@ -59,7 +59,7 @@ class ReminderRequest(BaseModel):
 
 
 class SettingsRequest(BaseModel):
-    """Configurações do cliente (e-mail e WhatsApp). Campos opcionais."""
+    """Configurações do cliente (e-mail, WhatsApp, marca, classificação)."""
 
     email_user: Optional[str] = None
     email_pass: Optional[str] = None
@@ -71,6 +71,19 @@ class SettingsRequest(BaseModel):
     whatsapp_enabled: Optional[bool] = None
     whatsapp_to: Optional[str] = None
     whatsapp_token: Optional[str] = None
+    # Classificação personalizada
+    categories: Optional[str] = None
+    urgency_criteria: Optional[str] = None
+    # Marca / aparência do e-mail
+    email_format: Optional[str] = None
+    email_template: Optional[str] = None
+    email_header: Optional[str] = None
+    company_name: Optional[str] = None
+    company_logo_url: Optional[str] = None
+    company_email: Optional[str] = None
+    company_phone: Optional[str] = None
+    company_site: Optional[str] = None
+    company_address: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -286,9 +299,27 @@ def save_settings(payload: SettingsRequest, user: User = Depends(require_api_use
         "WHATSAPP_TO": payload.whatsapp_to,
         "WHATSAPP_TOKEN": payload.whatsapp_token,
     }
-    # Não sobrescreve segredos com string vazia (mantém o valor existente).
+    # Não sobrescreve segredos/credenciais com string vazia (mantém o valor existente).
     for key, value in mapping.items():
         if value not in (None, ""):
+            cfg.set(key, value)
+
+    # Campos de texto (classificação/marca): permite limpar com string vazia.
+    text_fields = {
+        "CATEGORIES": payload.categories,
+        "URGENCY_CRITERIA": payload.urgency_criteria,
+        "EMAIL_FORMAT": payload.email_format,
+        "EMAIL_TEMPLATE": payload.email_template,
+        "EMAIL_HEADER": payload.email_header,
+        "COMPANY_NAME": payload.company_name,
+        "COMPANY_LOGO_URL": payload.company_logo_url,
+        "COMPANY_EMAIL": payload.company_email,
+        "COMPANY_PHONE": payload.company_phone,
+        "COMPANY_SITE": payload.company_site,
+        "COMPANY_ADDRESS": payload.company_address,
+    }
+    for key, value in text_fields.items():
+        if value is not None:
             cfg.set(key, value)
 
     if payload.auto_download_attachments is not None:
@@ -297,6 +328,54 @@ def save_settings(payload: SettingsRequest, user: User = Depends(require_api_use
         cfg.set("WHATSAPP_ENABLED", str(payload.whatsapp_enabled).lower())
 
     return {"ok": True, "settings": cfg.public_settings()}
+
+
+class EmailPreviewRequest(BaseModel):
+    """Campos do formulário para pré-visualizar o e-mail (sem precisar salvar)."""
+
+    body: Optional[str] = None
+    email_format: Optional[str] = None
+    email_template: Optional[str] = None
+    email_header: Optional[str] = None
+    company_name: Optional[str] = None
+    company_logo_url: Optional[str] = None
+    company_email: Optional[str] = None
+    company_phone: Optional[str] = None
+    company_site: Optional[str] = None
+    company_address: Optional[str] = None
+
+
+@router.post("/email/preview")
+def email_preview(
+    payload: EmailPreviewRequest = EmailPreviewRequest(),
+    user: User = Depends(require_api_user),
+):
+    """Renderiza como o e-mail será enviado, usando os valores atuais do formulário."""
+    from src.core.email_templates import branding_from_cfg, render_email
+
+    branding = branding_from_cfg(UserConfig(user.id))
+    overrides = {
+        "EMAIL_FORMAT": payload.email_format,
+        "EMAIL_TEMPLATE": payload.email_template,
+        "EMAIL_HEADER": payload.email_header,
+        "COMPANY_NAME": payload.company_name,
+        "COMPANY_LOGO_URL": payload.company_logo_url,
+        "COMPANY_EMAIL": payload.company_email,
+        "COMPANY_PHONE": payload.company_phone,
+        "COMPANY_SITE": payload.company_site,
+        "COMPANY_ADDRESS": payload.company_address,
+    }
+    for key, value in overrides.items():
+        if value is not None:
+            branding[key] = value
+
+    body = payload.body or (
+        "Olá! Recebemos sua mensagem e já estamos cuidando do seu atendimento. "
+        "Retornamos em breve com a solução. Qualquer dúvida, estamos à disposição."
+    )
+    if (branding.get("EMAIL_FORMAT") or "html").lower() == "plain":
+        return {"format": "plain", "text": body}
+    return {"format": "html", "html": render_email(body, branding)}
 
 
 class EmailTestRequest(BaseModel):

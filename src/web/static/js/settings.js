@@ -1,9 +1,31 @@
 /* Lógica da página de configurações do cliente. */
 
+function val(form, name) {
+  const el = form.elements[name];
+  return el ? el.value : "";
+}
+
+/* Campos de classificação + marca (reusados em salvar e pré-visualizar). */
+function brandingFields(form) {
+  return {
+    categories: val(form, "categories"),
+    urgency_criteria: val(form, "urgency_criteria"),
+    email_format: val(form, "email_format"),
+    email_template: val(form, "email_template"),
+    email_header: val(form, "email_header"),
+    company_name: val(form, "company_name"),
+    company_logo_url: val(form, "company_logo_url"),
+    company_email: val(form, "company_email"),
+    company_phone: val(form, "company_phone"),
+    company_site: val(form, "company_site"),
+    company_address: val(form, "company_address"),
+  };
+}
+
 async function saveSettings(event) {
   event.preventDefault();
   const form = event.target;
-  const payload = {
+  const payload = Object.assign({
     email_user: form.email_user.value,
     email_pass: form.email_pass.value,
     email_provider: form.email_provider.value,
@@ -14,7 +36,8 @@ async function saveSettings(event) {
     whatsapp_enabled: form.whatsapp_enabled.checked,
     whatsapp_to: form.whatsapp_to.value,
     whatsapp_token: form.whatsapp_token.value,
-  };
+  }, brandingFields(form));
+
   try {
     await postJSON("/api/settings", payload);
     toast("✓ Configurações salvas");
@@ -44,5 +67,28 @@ async function testEmail() {
     toast("✓ " + (r.message || "Conexão bem-sucedida!"));
   } catch (e) {
     toast("Conexão falhou: " + e.message, true);
+  }
+}
+
+/** Pré-visualiza como o e-mail será enviado, usando os valores atuais do formulário. */
+async function previewEmail() {
+  const form = document.getElementById("settingsForm");
+  const wrap = document.getElementById("emailPreviewWrap");
+  const frame = document.getElementById("emailPreview");
+  const text = document.getElementById("emailPreviewText");
+  try {
+    const r = await postJSON("/api/email/preview", brandingFields(form));
+    wrap.hidden = false;
+    if (r.format === "plain") {
+      frame.hidden = true;
+      text.hidden = false;
+      text.textContent = r.text || "";
+    } else {
+      text.hidden = true;
+      frame.hidden = false;
+      frame.srcdoc = r.html || "";
+    }
+  } catch (e) {
+    toast("Erro na prévia: " + e.message, true);
   }
 }

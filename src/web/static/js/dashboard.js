@@ -130,6 +130,7 @@ async function syncNow() {
     const r = await api("/api/sync", { method: "POST" });
     toast(`${r.processed} ticket(s) sincronizado(s)`);
     await loadTickets();
+    scheduleAutoRefresh();  // reinicia a contagem de 10 min a partir do clique
   } catch (e) {
     toast("Erro: " + e.message, true);
   } finally {
@@ -329,6 +330,15 @@ function toggleOriginal() {
   if (el) el.hidden = !el.hidden;
 }
 
+/* Atualização automática a cada 10 min; reinicia a contagem quando chamada
+   (ex.: logo após o cliente clicar em "Sincronizar"). */
+const AUTO_REFRESH_MS = 10 * 60 * 1000;
+let _autoTimer;
+function scheduleAutoRefresh() {
+  clearInterval(_autoTimer);
+  _autoTimer = setInterval(loadTickets, AUTO_REFRESH_MS);
+}
+
 /* -------------------------------------------------- Inicialização + refresh */
 document.addEventListener("DOMContentLoaded", () => {
   // Filtro por cliente vindo da página "Clientes" (?sender=...).
@@ -345,6 +355,5 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
-  // Atualização automática (tickets + KPIs) a cada 60s.
-  setInterval(loadTickets, 60000);
+  scheduleAutoRefresh();  // a cada 10 minutos
 });

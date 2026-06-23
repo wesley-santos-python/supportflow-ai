@@ -31,6 +31,21 @@ USER_KEYS = [
     "WHATSAPP_ENABLED",
     "WHATSAPP_TO",
     "WHATSAPP_TOKEN",
+    # Classificação personalizada
+    "CATEGORIES",
+    "URGENCY_CRITERIA",
+    # Marca / aparência do e-mail
+    "EMAIL_FORMAT",
+    "EMAIL_TEMPLATE",
+    "EMAIL_HEADER",
+    "COMPANY_NAME",
+    "COMPANY_LOGO_URL",
+    "COMPANY_EMAIL",
+    "COMPANY_PHONE",
+    "COMPANY_SITE",
+    "COMPANY_ADDRESS",
+    # Controle interno
+    "INITIAL_SYNC_DONE",
 ]
 
 

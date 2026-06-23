@@ -271,3 +271,37 @@ class TestSendersAndAttachments:
         assert atts[0]["filename"] == "contrato.pdf"
         assert atts[0]["ticket_subject"] == "Com anexo"
         assert atts[0]["ticket_sender"] == "apple@x.com"
+
+
+class TestBrandingAndPreview:
+    """Configuração de classificação/marca e pré-visualização do e-mail."""
+
+    def test_save_branding_settings(self, client):
+        resp = client.post("/api/settings", json={
+            "categories": "Suporte,Vendas",
+            "company_name": "Doce & Festa",
+            "company_phone": "(77) 99999-0000",
+            "email_template": "classico",
+        })
+        assert resp.status_code == 200
+        s = resp.json()["settings"]
+        assert s["CATEGORIES"] == "Suporte,Vendas"
+        assert s["COMPANY_PHONE"] == "(77) 99999-0000"
+        assert s["EMAIL_TEMPLATE"] == "classico"
+
+    def test_email_preview_html_has_footer(self, client):
+        resp = client.post("/api/email/preview", json={
+            "email_template": "moderno",
+            "company_name": "Doce & Festa",
+            "company_phone": "(77) 99999-0000",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["format"] == "html"
+        assert "Doce &amp; Festa" in data["html"]
+        assert "(77) 99999-0000" in data["html"]
+
+    def test_email_preview_plain(self, client):
+        resp = client.post("/api/email/preview", json={"email_format": "plain"})
+        assert resp.json()["format"] == "plain"
+        assert resp.json()["text"]

@@ -48,9 +48,16 @@ class SupportController:
         """
         logger.info(f"Sincronizando e-mails (user={self.user_id})...")
 
+        # Na 1ª sincronização, traz só os não lidos da última semana (evita
+        # analisar um backlog enorme). Depois, todos os não lidos normalmente.
+        initial_done = self.cfg.get_bool("INITIAL_SYNC_DONE", False)
+        since_days = None if initial_done else 7
+
         # Propaga EmailConnectionError para a UI mostrar o motivo real
         # (senha de app incorreta, servidor errado, etc.) em vez de "0 tickets".
-        new_emails = self.email_api.fetch_unread_emails()
+        new_emails = self.email_api.fetch_unread_emails(since_days=since_days)
+        if not initial_done:
+            self.cfg.set("INITIAL_SYNC_DONE", "true")
         if not new_emails:
             return 0
 
@@ -65,7 +72,11 @@ class SupportController:
                     continue
 
                 logger.info(f"Analisando ticket: {mail['subject']}")
-                analysis = self.ai_api.analyze_ticket(mail["body"])
+                analysis = self.ai_api.analyze_ticket(
+                    mail["body"],
+                    categories=self.cfg.get("CATEGORIES"),
+                    urgency_criteria=self.cfg.get("URGENCY_CRITERIA"),
+                )
 
                 ticket_data = {
                     "user_id": self.user_id,

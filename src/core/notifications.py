@@ -39,6 +39,11 @@ class WhatsAppNotifier:
             ``True`` se um resumo foi enviado; ``False`` se não havia tickets
             urgentes ou a integração está desabilitada.
         """
+        # Se o WhatsApp está desligado, nem gera o resumo — evita gastar IA à toa
+        # a cada ciclo do agendador (economia direta de custo).
+        if not self.enabled or not self.to_number:
+            return False
+
         urgent = db.get_urgent_tickets(user_id=self.user_id, limit=10)
         if not urgent:
             return False

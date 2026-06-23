@@ -62,12 +62,62 @@
   </div>
 
   <div class="panel">
-    <h3><svg class="ico sm"><use href="#i-shield"/></svg> Inteligência Artificial</h3>
-    <p class="muted small">
-      A análise e a geração de respostas são feitas por IA fornecida pela
-      plataforma. Você não precisa configurar nada — basta conectar seu e-mail
-      e o sistema cuida do resto.
-    </p>
+    <h3><svg class="ico sm"><use href="#i-folder"/></svg> Classificação dos e-mails</h3>
+    <p class="muted small">Defina suas categorias e o que conta como urgente — a IA usa isso ao classificar.</p>
+    <label>Categorias (separadas por vírgula)
+      <input name="categories" value="{{ settings.CATEGORIES or '' }}" placeholder="Técnico,Financeiro,Logística,Outros" />
+    </label>
+    <label>O que é urgente (critérios)
+      <textarea name="urgency_criteria" rows="3" placeholder="ex.: prazo vencendo, sistema parado, multa, cliente irritado...">{{ settings.URGENCY_CRITERIA or '' }}</textarea>
+    </label>
+  </div>
+
+  <div class="panel" style="grid-column:1/-1">
+    <h3><svg class="ico sm"><use href="#i-mail"/></svg> Aparência do e-mail enviado</h3>
+    <div class="settings-grid">
+      <label>Formato
+        <select name="email_format">
+          <option value="html" {{ 'selected' if settings.EMAIL_FORMAT != 'plain' }}>HTML (bonito)</option>
+          <option value="plain" {{ 'selected' if settings.EMAIL_FORMAT == 'plain' }}>Texto normal</option>
+        </select>
+      </label>
+      <label>Modelo (template)
+        <select name="email_template">
+          <option value="moderno" {{ 'selected' if settings.EMAIL_TEMPLATE == 'moderno' }}>Moderno</option>
+          <option value="classico" {{ 'selected' if settings.EMAIL_TEMPLATE == 'classico' }}>Clássico</option>
+          <option value="minimalista" {{ 'selected' if settings.EMAIL_TEMPLATE == 'minimalista' }}>Minimalista</option>
+        </select>
+      </label>
+      <label>Nome da empresa
+        <input name="company_name" value="{{ settings.COMPANY_NAME or '' }}" placeholder="Sua Empresa Ltda" />
+      </label>
+      <label>Cabeçalho / slogan (opcional)
+        <input name="email_header" value="{{ settings.EMAIL_HEADER or '' }}" placeholder="Atendimento ao cliente" />
+      </label>
+      <label>URL da logo (opcional)
+        <input name="company_logo_url" value="{{ settings.COMPANY_LOGO_URL or '' }}" placeholder="https://.../logo.png" />
+      </label>
+      <label>E-mail de contato (rodapé)
+        <input name="company_email" value="{{ settings.COMPANY_EMAIL or '' }}" placeholder="contato@empresa.com" />
+      </label>
+      <label>Telefone (rodapé)
+        <input name="company_phone" value="{{ settings.COMPANY_PHONE or '' }}" placeholder="(77) 90000-0000" />
+      </label>
+      <label>Site (rodapé)
+        <input name="company_site" value="{{ settings.COMPANY_SITE or '' }}" placeholder="www.empresa.com" />
+      </label>
+      <label style="grid-column:1/-1">Endereço (rodapé)
+        <input name="company_address" value="{{ settings.COMPANY_ADDRESS or '' }}" placeholder="Rua X, 123 - Cidade/UF" />
+      </label>
+    </div>
+    <button type="button" class="btn ghost" style="margin-top:10px" onclick="previewEmail()">
+      <svg class="ico sm"><use href="#i-mail"/></svg> Pré-visualizar e-mail
+    </button>
+    <div id="emailPreviewWrap" class="email-preview-wrap" hidden>
+      <div class="muted small" style="margin:14px 0 6px">Prévia de como o e-mail será enviado:</div>
+      <iframe id="emailPreview" class="email-preview" title="Prévia do e-mail"></iframe>
+      <pre id="emailPreviewText" class="original-body" hidden></pre>
+    </div>
   </div>
 
   <div class="settings-actions">

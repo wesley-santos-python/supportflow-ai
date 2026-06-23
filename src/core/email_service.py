@@ -49,6 +49,7 @@ class EmailService:
                  Se ``None``, usa a configuração global (env) — modo single-tenant.
         """
         cfg = cfg or config
+        self._cfg = cfg
         self.user = cfg.get("EMAIL_USER")
         self.password = cfg.get("EMAIL_PASS")
         self.imap_server = cfg.get("IMAP_SERVER", "imap.gmail.com")
@@ -62,12 +63,14 @@ class EmailService:
     # ------------------------------------------------------------------
     # Leitura (IMAP)
     # ------------------------------------------------------------------
-    def fetch_unread_emails(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def fetch_unread_emails(self, limit: int = 10, since_days: int = None) -> List[Dict[str, Any]]:
         """
         Busca e-mails não lidos da caixa de entrada.
 
         Args:
             limit: Número máximo de e-mails a buscar.
+            since_days: Se informado, considera apenas e-mails dos últimos N dias
+                (usado na 1ª sincronização para não varrer um backlog antigo).
 
         Returns:
             Lista de dicionários com ``id``, ``sender``, ``subject``, ``body``,
@@ -81,9 +84,15 @@ class EmailService:
         if not self.user or not self.password:
             raise EmailConnectionError(message=_RESAVE_MSG)
 
+        criteria = {"seen": False}
+        if since_days:
+            from datetime import date, timedelta
+
+            criteria["date_gte"] = date.today() - timedelta(days=since_days)
+
         try:
             with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
-                for msg in mailbox.fetch(AND(seen=False), limit=limit, reverse=True):
+                for msg in mailbox.fetch(AND(**criteria), limit=limit, reverse=True):
                     emails_payload.append(
                         {
                             "id": msg.uid,
@@ -194,6 +203,17 @@ class EmailService:
         message["To"] = to_email
         message["Subject"] = subject or "Re: Suporte"
         message.set_content(body)
+
+        # Versão HTML (template escolhido) como alternativa, salvo se o cliente
+        # preferir e-mail em texto puro (EMAIL_FORMAT="plain").
+        if str(self._cfg.get("EMAIL_FORMAT") or "html").lower() != "plain":
+            from src.core.email_templates import branding_from_cfg, render_email
+
+            try:
+                html_body = render_email(body, branding_from_cfg(self._cfg))
+                message.add_alternative(html_body, subtype="html")
+            except Exception as exc:  # pragma: no cover - degrada para texto
+                logger.warning(f"Falha ao renderizar HTML, enviando texto: {exc}")
 
         for path in attachments or []:
             self._attach_file(message, path)

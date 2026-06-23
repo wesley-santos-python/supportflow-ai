@@ -47,22 +47,36 @@ class AIService:
             self.client = genai.Client(api_key=api_key)
         logger.debug(f"AIService inicializado (modelo={self.model})")
 
-    def analyze_ticket(self, email_body: str) -> Dict[str, str]:
+    def analyze_ticket(
+        self,
+        email_body: str,
+        categories: str = None,
+        urgency_criteria: str = None,
+    ) -> Dict[str, str]:
         """
         Analisa o corpo de um e-mail e retorna a classificação estruturada.
 
         Args:
             email_body: Texto do corpo do e-mail a ser analisado.
+            categories: Categorias do cliente (lista separada por vírgula).
+            urgency_criteria: O que o cliente considera urgente (texto livre).
 
         Returns:
             Dicionário com ``urgencia``, ``categoria``, ``resumo`` e
             ``resposta_sugerida``. Em caso de falha, retorna um fallback seguro.
         """
+        # Limita o corpo para conter custo de tokens em e-mails muito longos.
+        email_body = (email_body or "")[:4000]
+        cats = categories or "Técnico,Financeiro,Logística,Outros"
+        crit = (urgency_criteria or "").strip()
+        crit_line = f"Considere urgência ALTA quando: {crit}. " if crit else ""
+
         prompt = (
             "Você é um assistente de suporte ao cliente. Analise este e-mail e "
             "retorne APENAS um JSON válido com as chaves: 'urgencia' "
-            "(Alta/Média/Baixa), 'categoria' (Técnico/Financeiro/Logística/"
-            "Outros), 'resumo' (uma frase objetiva) e 'resposta_sugerida'. "
+            f"(Alta/Média/Baixa), 'categoria' (escolha exatamente uma entre: {cats}), "
+            "'resumo' (uma frase objetiva) e 'resposta_sugerida'. "
+            f"{crit_line}"
             "A 'resposta_sugerida' deve ser em português, pronta para enviar ao "
             "cliente: amigável, profissional e objetiva — reconhece o problema, "
             "dá um próximo passo claro e encerra de forma cordial. Não use "

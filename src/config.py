@@ -33,12 +33,27 @@ DEFAULTS: Dict[str, str] = {
     "SMTP_SERVER": "smtp.gmail.com",
     "SMTP_PORT": "587",
     "GEMINI_MODEL": "gemini-3.1-flash-lite",
-    "SYNC_INTERVAL_MINUTES": "2",
+    "SYNC_INTERVAL_MINUTES": "10",
     "AUTO_DOWNLOAD_ATTACHMENTS": "false",
     "ATTACHMENTS_DIR": "data/attachments",
     "REPORTS_DIR": "data/reports",
     "WHATSAPP_ENABLED": "false",
     "WHATSAPP_TO": "",
+    # Classificação personalizável por cliente (alimenta a IA).
+    "CATEGORIES": "Técnico,Financeiro,Logística,Outros",
+    "URGENCY_CRITERIA": "prazo vencendo, sistema parado, multa, cobrança indevida, "
+                        "cliente irritado, palavra 'urgente'",
+    # Marca / aparência do e-mail enviado.
+    "EMAIL_FORMAT": "html",          # "html" (bonito) ou "plain" (texto)
+    "EMAIL_TEMPLATE": "moderno",     # moderno | classico | minimalista
+    "EMAIL_HEADER": "",              # frase/tagline do cabeçalho (opcional)
+    "COMPANY_LOGO_URL": "",
+    "COMPANY_EMAIL": "",
+    "COMPANY_PHONE": "",
+    "COMPANY_SITE": "",
+    "COMPANY_ADDRESS": "",
+    # Controle interno da primeira sincronização (últimos 7 dias).
+    "INITIAL_SYNC_DONE": "false",
 }
 
 # Mapa de provedores de e-mail conhecidos -> (IMAP, SMTP, porta SMTP).
