@@ -74,6 +74,14 @@ def init_db() -> None:
     logger.debug("Banco de dados inicializado")
 
 
+def reset_database() -> None:
+    """Apaga TODAS as tabelas e recria do zero (recomeço total — destrutivo)."""
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    _run_migrations()
+    logger.warning("Banco de dados RESETADO — todas as tabelas foram recriadas")
+
+
 def _run_migrations() -> None:
     """
     Migração best-effort: adiciona a coluna ``user_id`` às tabelas de negócio

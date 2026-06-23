@@ -90,6 +90,19 @@ async function uploadLogo() {
   }
 }
 
+/** Reset TOTAL do banco — apaga tudo e recomeça do zero (dupla confirmação). */
+async function resetDatabase() {
+  if (!confirm("APAGAR TUDO? Remove todos os tickets, sua conta e configurações. Não pode ser desfeito.")) return;
+  if (!confirm("Tem certeza ABSOLUTA? Você terá que cadastrar a conta e reconfigurar o e-mail do zero.")) return;
+  try {
+    await postJSON("/api/admin/reset", {});
+    toast("Banco apagado. Redirecionando para o cadastro...");
+    setTimeout(() => { window.location.href = "/register"; }, 1400);
+  } catch (e) {
+    toast("Erro: " + e.message, true);
+  }
+}
+
 /** Pré-visualiza como o e-mail será enviado, usando os valores atuais do formulário. */
 async function previewEmail() {
   const form = document.getElementById("settingsForm");

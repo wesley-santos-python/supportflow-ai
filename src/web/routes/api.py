@@ -111,6 +111,14 @@ def clear_tickets(user: User = Depends(require_api_user)):
     return {"ok": True, "deleted": deleted}
 
 
+@router.post("/admin/reset")
+def admin_reset(user: User = Depends(require_api_user)):
+    """Reset TOTAL do banco (apaga tickets, contas e configurações). Requer login."""
+    logger.warning(f"Reset total do banco solicitado (user={user.id})")
+    db.reset_database()
+    return {"ok": True}
+
+
 _PAGE_SIZE = 50
 
 

@@ -237,6 +237,18 @@ class TestTicketActions:
         assert resp.json()["deleted"] == 2
         assert client.get("/api/tickets").json()["tickets"] == []
 
+    def test_admin_reset_wipes_everything(self, client):
+        from src.data import db
+
+        user = db.get_user_by_email("a@test.com")
+        db.save_ticket({"user_id": user.id, "uid": "r1", "sender": "x@x.com", "subject": "A"})
+
+        resp = client.post("/api/admin/reset")
+        assert resp.status_code == 200
+        # Tudo recriado vazio: a conta sumiu e a sessão deixa de valer.
+        assert db.get_user_by_email("a@test.com") is None
+        assert client.get("/api/tickets").status_code == 401
+
     def test_enviados_only_answered(self, client):
         """A guia Enviados mostra só os tickets já respondidos."""
         from src.data import db

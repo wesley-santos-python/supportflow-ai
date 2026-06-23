@@ -314,6 +314,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 /* Paginação */
 .pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 26px; }
 
+/* Zona de perigo (reset total nas configurações) */
+.danger-zone { border-color: var(--danger); }
+.danger-zone h3, .danger-zone h3 .ico { color: var(--danger); }
+
 /* Tag de filtro por cliente (no dashboard, vindo da página Clientes) ------ */
 .client-filter-tag { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);
   background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
