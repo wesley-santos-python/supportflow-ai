@@ -48,32 +48,12 @@ function setText(id, value) {
   if (el) el.textContent = value;
 }
 
-/* ---------------------------------------------------------------- Clientes */
-async function loadSenders() {
-  try {
-    const data = await api("/api/senders");
-    renderClients(data.senders || []);
-  } catch (_) {}
-}
-
-function renderClients(senders) {
-  const box = document.getElementById("clientsList");
-  if (!box) return;
-  const items = [{ sender: "", label: "Todos os clientes", total: "" }]
-    .concat(senders.map((s) => ({ sender: s.sender, label: s.sender, total: s.total, abertos: s.abertos })));
-  box.innerHTML = items.map((s) => `
-    <button class="client-item ${currentFilters.sender === s.sender ? "active" : ""}"
-            data-sender="${escapeHtml(s.sender)}" title="${escapeHtml(s.label)}">
-      <span class="client-name">${escapeHtml(s.label)}</span>
-      ${s.total !== "" ? `<span class="client-count ${s.abertos ? "has-open" : ""}">${s.total}</span>` : ""}
-    </button>`).join("");
-}
-
+/* -------------------------------------------------------- Filtro por cliente */
+/* O cliente vem da página "Clientes" via ?sender=... na URL. */
 function clearClient() {
   currentFilters.sender = "";
   showClientTag();
-  document.querySelectorAll("#clientsList .client-item").forEach((el) =>
-    el.classList.toggle("active", el.dataset.sender === ""));
+  history.replaceState(null, "", location.pathname);  // tira ?sender= da URL
   loadTickets();
 }
 
@@ -150,7 +130,6 @@ async function syncNow() {
     const r = await api("/api/sync", { method: "POST" });
     toast(`${r.processed} ticket(s) sincronizado(s)`);
     await loadTickets();
-    loadSenders();
   } catch (e) {
     toast("Erro: " + e.message, true);
   } finally {
@@ -352,28 +331,20 @@ function toggleOriginal() {
 
 /* -------------------------------------------------- Inicialização + refresh */
 document.addEventListener("DOMContentLoaded", () => {
-  loadTickets();
-  loadSenders();
-
-  // Filtro por cliente (delegação de clique no rail lateral).
-  const clients = document.getElementById("clientsList");
-  if (clients) {
-    clients.addEventListener("click", (e) => {
-      const item = e.target.closest(".client-item");
-      if (!item) return;
-      currentFilters.sender = item.dataset.sender || "";
-      document.querySelectorAll("#clientsList .client-item").forEach((el) => el.classList.remove("active"));
-      item.classList.add("active");
-      showClientTag();
-      loadTickets();
-    });
+  // Filtro por cliente vindo da página "Clientes" (?sender=...).
+  const senderParam = new URLSearchParams(location.search).get("sender");
+  if (senderParam) {
+    currentFilters.sender = senderParam;
+    showClientTag();
   }
+
+  loadTickets();
 
   document.getElementById("modal").addEventListener("click", (e) => {
     if (e.target.id === "modal") closeModal();
   });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
 
-  // Atualização automática (tickets, KPIs e clientes) a cada 60s.
-  setInterval(() => { loadTickets(); loadSenders(); }, 60000);
+  // Atualização automática (tickets + KPIs) a cada 60s.
+  setInterval(loadTickets, 60000);
 });

@@ -54,6 +54,19 @@ def analytics(request: Request):
     )
 
 
+@router.get("/clientes", response_class=HTMLResponse)
+def clientes(request: Request):
+    """Lista os clientes (remetentes), com alerta para e-mails suspeitos."""
+    user = auth.current_user(request)
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    return _templates().TemplateResponse(
+        request,
+        "clientes.html",
+        {"user": user.to_dict(), "active": "clientes", "clientes": db.list_senders(user.id)},
+    )
+
+
 @router.get("/reminders", response_class=HTMLResponse)
 def reminders(request: Request):
     """Página de lembretes e respostas agendadas."""
@@ -74,18 +87,30 @@ def reminders(request: Request):
 
 @router.get("/anexos", response_class=HTMLResponse)
 def anexos(request: Request):
-    """Guia de anexos: lista todos os arquivos recebidos nos tickets do cliente."""
+    """Guia de anexos: arquivos reais agrupados por cliente (remetente)."""
     user = auth.current_user(request)
     if not user:
         return RedirectResponse("/login", status_code=303)
+
+    from src.core import attachments as attachment_manager
+    from src.core.sender_risk import extract_email
+
+    grupos: dict = {}
+    for att in db.list_attachments(user.id):
+        if not attachment_manager.is_real_file(att.get("filename"), att.get("content_type")):
+            continue
+        sender = att.get("ticket_sender") or "(desconhecido)"
+        grupo = grupos.setdefault(
+            sender,
+            {"sender": sender, "email": extract_email(sender) or sender, "files": []},
+        )
+        grupo["files"].append(att)
+
+    clientes = sorted(grupos.values(), key=lambda g: len(g["files"]), reverse=True)
     return _templates().TemplateResponse(
         request,
         "attachments.html",
-        {
-            "user": user.to_dict(),
-            "active": "anexos",
-            "attachments": db.list_attachments(user.id),
-        },
+        {"user": user.to_dict(), "active": "anexos", "clientes": clientes},
     )
 
 

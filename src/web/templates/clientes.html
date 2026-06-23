@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+
+{% block content %}
+<header class="page-head">
+  <div>
+    <h1>Clientes</h1>
+    <p class="sub">Cada remetente é tratado como um cliente · {{ clientes|length }} no total</p>
+  </div>
+</header>
+
+{% if clientes %}
+<section class="clients-grid">
+  {% for c in clientes %}
+  <a class="client-card {{ 'risk-alto' if c.risk == 'alto' else ('risk-medio' if c.risk == 'medio' else '') }}"
+     href="/?sender={{ c.sender | urlencode }}" title="Ver tickets de {{ c.email }}">
+    <div class="client-card-top">
+      <div class="client-avatar">{{ (c.email or '?')[0]|upper }}</div>
+      <div class="client-id">
+        <div class="client-email">{{ c.email or c.sender }}</div>
+        <div class="muted small">{{ c.total }} ticket(s) · {{ c.abertos }} aberto(s)</div>
+      </div>
+    </div>
+
+    {% if c.risk == 'alto' %}
+    <div class="risk-flag alto"><svg class="ico sm"><use href="#i-shield-alert"/></svg> Possível fraude</div>
+    {% elif c.risk == 'medio' %}
+    <div class="risk-flag medio"><svg class="ico sm"><use href="#i-alert"/></svg> Verificar remetente</div>
+    {% else %}
+    <div class="risk-flag ok"><svg class="ico sm"><use href="#i-check-circle"/></svg> Sem sinais de risco</div>
+    {% endif %}
+
+    {% if c.risk_reasons %}
+    <ul class="risk-reasons">
+      {% for r in c.risk_reasons %}<li>{{ r }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+  </a>
+  {% endfor %}
+</section>
+{% else %}
+<div class="empty">
+  <svg class="ico"><use href="#i-users"/></svg>
+  <p>Nenhum cliente ainda. Sincronize seus e-mails.</p>
+</div>
+{% endif %}
+{% endblock %}

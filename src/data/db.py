@@ -320,10 +320,22 @@ def list_senders(user_id: Optional[int] = None) -> List[Dict[str, Any]]:
         if user_id is not None:
             query = query.filter(Ticket.user_id == user_id)
         rows = query.group_by(Ticket.sender).order_by(func.count(Ticket.id).desc()).all()
-        return [
-            {"sender": sender or "(desconhecido)", "total": int(total or 0), "abertos": int(abertos or 0)}
-            for sender, total, abertos in rows
-        ]
+
+        from src.core.sender_risk import assess_sender
+
+        result: List[Dict[str, Any]] = []
+        for sender, total, abertos in rows:
+            name = sender or "(desconhecido)"
+            risk = assess_sender(name)
+            result.append({
+                "sender": name,
+                "email": risk["email"] or name,
+                "total": int(total or 0),
+                "abertos": int(abertos or 0),
+                "risk": risk["level"],
+                "risk_reasons": risk["reasons"],
+            })
+        return result
     finally:
         db.close()
 

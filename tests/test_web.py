@@ -89,7 +89,7 @@ class TestAuthFlow:
 class TestWebPages:
     """Páginas HTML autenticadas devem responder 200."""
 
-    @pytest.mark.parametrize("path", ["/", "/analytics", "/reminders", "/anexos", "/settings", "/report"])
+    @pytest.mark.parametrize("path", ["/", "/analytics", "/clientes", "/reminders", "/anexos", "/settings", "/report"])
     def test_pages_render(self, client, path):
         assert client.get(path).status_code == 200
 

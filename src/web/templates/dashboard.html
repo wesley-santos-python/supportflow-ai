@@ -40,52 +40,42 @@
   </div>
 </section>
 
-<section class="dash-body">
-  <aside class="clients-rail panel">
-    <h3><svg class="ico sm"><use href="#i-inbox"/></svg> Clientes</h3>
-    <p class="muted small" style="margin:-8px 0 12px">Cada remetente é um cliente.</p>
-    <div id="clientsList" class="clients-list"></div>
-  </aside>
-
-  <div class="dash-main">
-    <section class="toolbar">
-      <div class="search-wrap">
-        <svg class="ico sm"><use href="#i-search"/></svg>
-        <input type="search" id="search" class="search" placeholder="Buscar por assunto, remetente..." oninput="debouncedLoad()" />
-      </div>
-      <div class="chips" id="catChips">
-        <button class="chip active" data-val="Todos">Todos</button>
-        <button class="chip" data-val="Técnico">Técnico</button>
-        <button class="chip" data-val="Financeiro">Financeiro</button>
-        <button class="chip" data-val="Logística">Logística</button>
-        <button class="chip" data-val="Outros">Outros</button>
-      </div>
-      <select id="urgFilter" onchange="loadTickets()">
-        <option value="Todos">Toda urgência</option>
-        <option value="Alta">Alta</option>
-        <option value="Média">Média</option>
-        <option value="Baixa">Baixa</option>
-      </select>
-      <select id="statusFilter" onchange="loadTickets()">
-        <option value="Todos">Todo status</option>
-        <option value="Pendente">Pendente</option>
-        <option value="Em Andamento">Em Andamento</option>
-        <option value="Resolvido">Resolvido</option>
-      </select>
-    </section>
-
-    <div id="clientFilterTag" class="client-filter-tag" hidden>
-      Filtrando por <strong id="clientFilterName"></strong>
-      <button class="btn tiny ghost" onclick="clearClient()"><svg class="ico sm"><use href="#i-x"/></svg> limpar</button>
-    </div>
-
-    <section id="cards" class="cards"></section>
-    <div id="emptyState" class="empty" hidden>
-      <svg class="ico"><use href="#i-inbox"/></svg>
-      <p>Nenhum ticket encontrado.</p>
-    </div>
+<section class="toolbar">
+  <div class="search-wrap">
+    <svg class="ico sm"><use href="#i-search"/></svg>
+    <input type="search" id="search" class="search" placeholder="Buscar por assunto, remetente..." oninput="debouncedLoad()" />
   </div>
+  <div class="chips" id="catChips">
+    <button class="chip active" data-val="Todos">Todos</button>
+    <button class="chip" data-val="Técnico">Técnico</button>
+    <button class="chip" data-val="Financeiro">Financeiro</button>
+    <button class="chip" data-val="Logística">Logística</button>
+    <button class="chip" data-val="Outros">Outros</button>
+  </div>
+  <select id="urgFilter" onchange="loadTickets()">
+    <option value="Todos">Toda urgência</option>
+    <option value="Alta">Alta</option>
+    <option value="Média">Média</option>
+    <option value="Baixa">Baixa</option>
+  </select>
+  <select id="statusFilter" onchange="loadTickets()">
+    <option value="Todos">Todo status</option>
+    <option value="Pendente">Pendente</option>
+    <option value="Em Andamento">Em Andamento</option>
+    <option value="Resolvido">Resolvido</option>
+  </select>
 </section>
+
+<div id="clientFilterTag" class="client-filter-tag" hidden>
+  Filtrando pelo cliente <strong id="clientFilterName"></strong>
+  <button class="btn tiny ghost" onclick="clearClient()"><svg class="ico sm"><use href="#i-x"/></svg> limpar</button>
+</div>
+
+<section id="cards" class="cards"></section>
+<div id="emptyState" class="empty" hidden>
+  <svg class="ico"><use href="#i-inbox"/></svg>
+  <p>Nenhum ticket encontrado.</p>
+</div>
 
 <!-- Modal de detalhes/resposta (base: fechado; abre via classe .open) -->
 <div id="modal" class="modal">

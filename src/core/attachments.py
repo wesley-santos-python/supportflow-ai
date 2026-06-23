@@ -23,6 +23,32 @@ logger = get_logger(__name__)
 
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
 
+# Extensões consideradas "arquivos de verdade" na guia de Anexos
+# (documentos, imagens, mídia, planilhas...). Assinaturas/inline ficam de fora.
+REAL_FILE_EXTS = {
+    "pdf", "doc", "docx", "odt", "rtf", "txt", "csv", "xls", "xlsx", "ods",
+    "ppt", "pptx", "png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "heic",
+    "zip", "rar", "7z", "mp3", "wav", "ogg", "mp4", "mov", "avi", "mkv", "xml",
+}
+
+# Anexos técnicos que não interessam ao usuário (assinaturas, formatos da MS).
+_IGNORED_NAMES = {"winmail.dat", "smime.p7s", "smime.p7m", "signature.asc"}
+
+
+def is_real_file(filename: Optional[str], content_type: Optional[str] = None) -> bool:
+    """
+    Indica se um anexo é um arquivo "de verdade" para exibir na guia de Anexos.
+
+    Filtra assinaturas digitais, partes inline e formatos sem extensão útil.
+    """
+    if not filename:
+        return False
+    name = filename.strip().lower()
+    if name in _IGNORED_NAMES:
+        return False
+    _, dot, ext = name.rpartition(".")
+    return bool(dot) and ext in REAL_FILE_EXTS
+
 
 def _attachments_root() -> str:
     """Retorna o diretório raiz de anexos (criando-o se necessário)."""
