@@ -75,6 +75,29 @@ class TestEmailService:
             assert exc_info.value.message  # mensagem amigável ao usuário
             assert "Connection failed" in (exc_info.value.details or "")
 
+    def test_send_reply_sanitizes_newline_subject(self, mock_env):
+        """Assunto com quebra de linha (ex.: notificação do GitHub) não deve
+        quebrar o envio com 'Header values may not contain linefeed...'."""
+        with patch('src.core.email_service.smtplib.SMTP') as mock_smtp:
+            server = MagicMock()
+            mock_smtp.return_value.__enter__ = MagicMock(return_value=server)
+            mock_smtp.return_value.__exit__ = MagicMock(return_value=False)
+
+            from src.core.email_service import EmailService
+            service = EmailService()
+            ok = service.send_reply(
+                "cliente@empresa.com",
+                "Re: Run failed: Tests - main\n (07b97b3)",
+                "Olá, segue a resposta.",
+            )
+
+            assert ok is True
+            sent_msg = server.send_message.call_args[0][0]
+            assert "\n" not in sent_msg["Subject"]
+            assert "\r" not in sent_msg["Subject"]
+            # A serialização completa não pode levantar erro de header.
+            assert sent_msg.as_bytes()
+
     def test_mark_as_read(self, mock_env):
         """Testa marcação de e-mail como lido."""
         with patch('src.core.email_service.MailBox') as mock_mailbox:

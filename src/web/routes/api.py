@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
@@ -221,7 +222,12 @@ async def reply(
     """Envia uma resposta ao ticket agora, com anexos opcionais (multipart)."""
     paths = await _save_uploads(files)
     try:
-        ok = SupportController(user.id).send_ticket_reply(ticket_id, body, paths)
+        # O envio SMTP é bloqueante (rede, até dezenas de segundos). Numa rota
+        # async ele travaria o event loop e congelaria o app inteiro, então
+        # rodamos numa thread separada.
+        ok = await run_in_threadpool(
+            SupportController(user.id).send_ticket_reply, ticket_id, body, paths
+        )
     except EmailSendError as e:
         # Mostra o motivo real (ex.: senha de app incorreta) em vez de falha genérica.
         raise HTTPException(status_code=400, detail=e.message)

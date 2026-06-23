@@ -23,6 +23,22 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+
+def _clean_header(value: Optional[str]) -> str:
+    """
+    Remove quebras de linha (CR/LF) de um valor de cabeçalho de e-mail.
+
+    Cabeçalhos como ``Subject``/``To`` NÃO podem conter ``\\n`` ou ``\\r`` —
+    o ``smtplib`` levanta "Header values may not contain linefeed or carriage
+    return characters" e o envio falha. Assuntos de e-mails recebidos podem vir
+    com quebras embutidas (ex.: notificações do GitHub), então colapsamos
+    qualquer CR/LF em um espaço antes de montar a mensagem.
+    """
+    if not value:
+        return ""
+    return " ".join(str(value).replace("\r", "\n").split("\n")).strip()
+
+
 # Mensagem usada quando não há credenciais legíveis (não configurado ou a
 # senha salva ficou ilegível porque o SECRET_KEY do servidor mudou).
 _RESAVE_MSG = (
@@ -200,9 +216,9 @@ class EmailService:
             raise EmailSendError(message=_RESAVE_MSG)
 
         message = EmailMessage()
-        message["From"] = self.user
-        message["To"] = to_email
-        message["Subject"] = subject or "Re: Suporte"
+        message["From"] = _clean_header(self.user)
+        message["To"] = _clean_header(to_email)
+        message["Subject"] = _clean_header(subject) or "Re: Suporte"
         message.set_content(body)
 
         # Versão HTML (template escolhido) como alternativa, salvo se o cliente
