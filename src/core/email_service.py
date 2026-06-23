@@ -23,6 +23,14 @@ from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Mensagem usada quando não há credenciais legíveis (não configurado ou a
+# senha salva ficou ilegível porque o SECRET_KEY do servidor mudou).
+_RESAVE_MSG = (
+    "E-mail não configurado, ou a senha salva expirou porque a chave de "
+    "segurança (SECRET_KEY) do servidor mudou. Abra Configurações e salve a "
+    "senha de app novamente."
+)
+
 
 class EmailService:
     """
@@ -69,6 +77,9 @@ class EmailService:
             EmailConnectionError: Se falhar a conexão com o servidor.
         """
         emails_payload: List[Dict[str, Any]] = []
+
+        if not self.user or not self.password:
+            raise EmailConnectionError(message=_RESAVE_MSG)
 
         try:
             with MailBox(self.imap_server).login(self.user, self.password) as mailbox:
@@ -258,6 +269,9 @@ def _friendly_imap_error(exc: Exception, imap_server: str) -> str:
     net_keys = ("getaddrinfo", "name or service", "resolve", "timed out", "timeout",
                 "connection", "refused", "unreachable", "ssl")
 
+    # Usuário/senha vazios = credencial ilegível (SECRET_KEY mudou) ou não salva.
+    if "empty username or password" in raw:
+        return _RESAVE_MSG
     if any(k in raw for k in auth_keys):
         return (
             "E-mail ou senha incorretos. No Gmail, ative a verificação em duas "
