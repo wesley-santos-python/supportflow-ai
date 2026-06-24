@@ -47,15 +47,23 @@ def _clean_header(value: Optional[str]) -> str:
 def _friendly_resend_error(status: int, detail: str) -> str:
     """Traduz erros comuns da API do Resend em mensagens claras para a UI."""
     low = (detail or "").lower()
-    if status in (401, 403) or "api key" in low or "unauthorized" in low:
+    # Domínio não verificado costuma vir como HTTP 403 — checado ANTES do
+    # status para não ser ofuscado pela mensagem genérica de "API key inválida".
+    if "domain" in low or "not verified" in low:
+        return (
+            "O domínio do remetente não está verificado no Resend. Verifique o "
+            "domínio em RESEND_FROM (ex.: floatech.app) no painel do Resend."
+        )
+    if status == 401 or "api key" in low or "unauthorized" in low:
         return (
             "A chave do Resend (RESEND_API_KEY) é inválida ou expirou. "
             "Gere uma nova no painel do Resend e atualize as Variables do Railway."
         )
-    if "domain" in low or "not verified" in low or "from" in low:
+    if status == 403:
         return (
-            "O domínio do remetente não está verificado no Resend. Verifique o "
-            "domínio em RESEND_FROM (ex.: floatech.app) no painel do Resend."
+            "O serviço de envio (Resend) recusou a autorização. Confira se a "
+            "RESEND_API_KEY tem permissão de envio e se o domínio em RESEND_FROM "
+            "está verificado no painel do Resend."
         )
     if status == 422:
         return f"E-mail recusado pelo serviço de envio: {detail}"
@@ -320,9 +328,20 @@ class EmailService:
             payload["html"] = html_body
         if reply_to:
             payload["reply_to"] = reply_to
+        else:
+            # Sem Reply-To a resposta do cliente final cairia na conta central
+            # (RESEND_FROM) em vez da caixa do cliente. Avisa para não falhar
+            # silenciosamente quando o EMAIL_USER do cliente não está definido.
+            logger.warning(
+                "Envio via Resend sem Reply-To (EMAIL_USER do cliente ausente): "
+                "respostas do destinatário irão para o remetente central."
+            )
 
         files = []
         for path in attachments or []:
+            if not path or not os.path.isfile(path):
+                logger.warning(f"Anexo ignorado (não encontrado): {path}")
+                continue
             try:
                 with open(path, "rb") as fh:
                     content = base64.b64encode(fh.read()).decode("ascii")
@@ -393,7 +412,6 @@ class EmailService:
     def _attach_file(message: EmailMessage, path: str) -> None:
         """Anexa um arquivo local à mensagem, ignorando erros de leitura."""
         import mimetypes
-        import os
 
         if not path or not os.path.isfile(path):
             logger.warning(f"Anexo ignorado (não encontrado): {path}")
