@@ -142,11 +142,13 @@ def create_app() -> FastAPI:
         )
 
     # Import tardio evita ciclos durante a montagem.
-    from src.web.routes import api, auth_routes, pages
+    from src.web.routes import ai_service, api, auth_routes, pages
 
     app.include_router(auth_routes.router)
     app.include_router(pages.router)
     app.include_router(api.router, prefix="/api")
+    # API serviço-a-serviço (Floatech CRM), autenticada por chave de serviço.
+    app.include_router(ai_service.router, prefix="/ai")
 
     return app
 

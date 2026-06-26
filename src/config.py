@@ -33,6 +33,10 @@ DEFAULTS: Dict[str, str] = {
     "SMTP_SERVER": "smtp.gmail.com",
     "SMTP_PORT": "587",
     "GEMINI_MODEL": "gemini-3.1-flash-lite",
+    # Provedor de IA: "gemini" (padrão) ou "claude" (Anthropic).
+    # Para usar Claude: LLM_PROVIDER=claude + ANTHROPIC_API_KEY.
+    "LLM_PROVIDER": "gemini",
+    "CLAUDE_MODEL": "claude-opus-4-8",
     "SYNC_INTERVAL_MINUTES": "10",
     "AUTO_DOWNLOAD_ATTACHMENTS": "false",
     "ATTACHMENTS_DIR": "data/attachments",
@@ -64,7 +68,7 @@ EMAIL_PROVIDERS: Dict[str, Dict[str, str]] = {
 }
 
 # Chaves sensíveis que nunca devem ser expostas em respostas da API.
-SECRET_KEYS = {"EMAIL_PASS", "AI_API_KEY", "WHATSAPP_TOKEN"}
+SECRET_KEYS = {"EMAIL_PASS", "AI_API_KEY", "WHATSAPP_TOKEN", "ANTHROPIC_API_KEY"}
 
 
 def get(key: str, default: Optional[str] = None) -> Optional[str]:
